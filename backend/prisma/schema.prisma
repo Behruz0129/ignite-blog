@@ -1,0 +1,209 @@
+// ==========================================================
+//  PRISMA SCHEMA - IGNITE BLOG CMS
+//  Bu fayl ma'lumotlar bazasi tuzilishini (jadvallar) ta'riflaydi.
+//  O'zgartirgandan keyin migratsiya yarating:
+//    npm run prisma:migrate -- --name init
+// ==========================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------- ENUMS -----------------------------
+
+enum Role {
+  ADMIN
+  EDITOR
+}
+
+// Kontent holati: qoralama yoki chop etilgan
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+}
+
+// Qo'llanma murakkabligi
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+// Izoh holati: moderatsiya jarayoni
+enum CommentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ----------------------------- USERS -----------------------------
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String // bcrypt hash sifatida saqlanadi (hech qachon ochiq matn emas)
+  role      Role     @default(EDITOR)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Bu foydalanuvchi yaratgan kontentlar
+  news     News[]
+  guides   Guide[]
+  opinions Opinion[]
+
+  @@index([email])
+  @@map("users")
+}
+
+// ----------------------------- NEWS ------------------------------
+
+model News {
+  id              String        @id @default(cuid())
+  title           String
+  slug            String        @unique
+  excerpt         String? // qisqacha tavsif (ro'yxatlarda ko'rsatiladi)
+  content         String // HTML (Tiptap editordan)
+  featuredImage   String? // Cloudinary URL
+  metaTitle       String?
+  metaDescription String?
+  status          ContentStatus @default(DRAFT)
+  publishedAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  authorId   String?
+  author     User?      @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  categories Category[] @relation("NewsCategories")
+  tags       Tag[]      @relation("NewsTags")
+  comments   Comment[]
+
+  @@index([status, publishedAt])
+  @@index([slug])
+  @@map("news")
+}
+
+// ----------------------------- GUIDES ----------------------------
+
+model Guide {
+  id              String        @id @default(cuid())
+  title           String
+  slug            String        @unique
+  excerpt         String?
+  content         String
+  featuredImage   String?
+  metaTitle       String?
+  metaDescription String?
+  difficulty      Difficulty    @default(BEGINNER)
+  status          ContentStatus @default(DRAFT)
+  publishedAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  authorId   String?
+  author     User?      @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  categories Category[] @relation("GuideCategories")
+  tags       Tag[]      @relation("GuideTags")
+  comments   Comment[]
+
+  @@index([status, publishedAt])
+  @@index([slug])
+  @@map("guides")
+}
+
+// ----------------------------- OPINIONS --------------------------
+
+model Opinion {
+  id              String        @id @default(cuid())
+  title           String
+  slug            String        @unique
+  excerpt         String?
+  content         String
+  featuredImage   String?
+  metaTitle       String?
+  metaDescription String?
+  status          ContentStatus @default(DRAFT)
+  publishedAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  authorId   String?
+  author     User?      @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  categories Category[] @relation("OpinionCategories")
+  tags       Tag[]      @relation("OpinionTags")
+  comments   Comment[]
+
+  @@index([status, publishedAt])
+  @@index([slug])
+  @@map("opinions")
+}
+
+// --------------------------- CATEGORIES --------------------------
+
+model Category {
+  id   String @id @default(cuid())
+  name String @unique
+  slug String @unique
+
+  news     News[]    @relation("NewsCategories")
+  guides   Guide[]   @relation("GuideCategories")
+  opinions Opinion[] @relation("OpinionCategories")
+
+  @@map("categories")
+}
+
+// ------------------------------ TAGS -----------------------------
+
+model Tag {
+  id   String @id @default(cuid())
+  name String @unique
+  slug String @unique
+
+  news     News[]    @relation("NewsTags")
+  guides   Guide[]   @relation("GuideTags")
+  opinions Opinion[] @relation("OpinionTags")
+
+  @@map("tags")
+}
+
+// ---------------------------- COMMENTS ---------------------------
+
+model Comment {
+  id          String        @id @default(cuid())
+  authorName  String
+  authorEmail String
+  content     String
+  status      CommentStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+
+  // Izoh qaysi kontentga tegishli (faqat bittasi to'ldiriladi)
+  newsId    String?
+  news      News?    @relation(fields: [newsId], references: [id], onDelete: Cascade)
+  guideId   String?
+  guide     Guide?   @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  opinionId String?
+  opinion   Opinion? @relation(fields: [opinionId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@map("comments")
+}
+
+// ----------------------------- MEDIA -----------------------------
+
+model Media {
+  id        String   @id @default(cuid())
+  publicId  String   @unique // Cloudinary public_id (o'chirish uchun kerak)
+  url       String
+  width     Int?
+  height    Int?
+  format    String?
+  bytes     Int?
+  createdAt DateTime @default(now())
+
+  @@map("media")
+}

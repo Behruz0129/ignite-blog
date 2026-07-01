@@ -1,0 +1,28 @@
+# dependencies
+node_modules/
+**/node_modules/
+
+# build output
+dist/
+.next/
+out/
+
+# env / secrets (HECH QACHON commit qilinmaydi)
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+
+# logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# editor
+.vscode/
+.idea/
