@@ -17,6 +17,13 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # MUHIM: NODE_ENV=production bo'lsa npm devDependencies (@types, tsc, tsx,
+      # prisma) ni o'rnatmaydi va TypeScript build yiqiladi. Quyidagi sozlama
+      # build paytida ularni ham o'rnatishga majbur qiladi.
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"
+      - key: NPM_CONFIG_INCLUDE
+        value: dev
       # PORT'ni Render avtomatik beradi - tegmaymiz
       - key: DATABASE_URL
         sync: false # Neon connection string (qo'lda kiritiladi)

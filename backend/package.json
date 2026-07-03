@@ -13,7 +13,7 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "seed": "tsx prisma/seed.ts",
-    "render-build": "npm install && npx prisma migrate deploy && npm run build && npm run seed",
+    "render-build": "npm install --include=dev && npx prisma migrate deploy && npm run build && npm run seed",
     "lint": "echo \"(optional) add eslint here\""
   },
   "engines": {
