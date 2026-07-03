@@ -40,7 +40,17 @@ export const mediaService = {
         stream.end(file.buffer);
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+      // Cloudinary xatoni {message, http_code, name} obyekti sifatida qaytaradi
+      let msg: string;
+      if (err instanceof Error) {
+        msg = err.message;
+      } else if (err && typeof err === "object") {
+        const e = err as Record<string, unknown>;
+        msg = String(e.message ?? JSON.stringify(err));
+        if (e.http_code) msg += ` (http_code: ${e.http_code})`;
+      } else {
+        msg = String(err);
+      }
       throw AppError.badRequest(`Cloudinary yuklash xatosi: ${msg}`);
     }
 
