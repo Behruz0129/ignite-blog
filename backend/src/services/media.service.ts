@@ -23,18 +23,26 @@ export const mediaService = {
     }
     if (!file) throw AppError.badRequest("Fayl yuborilmadi");
 
-    // Buffer'ni stream orqali Cloudinary'ga yuborish (Promise'ga o'raymiz)
-    const result: UploadApiResponse = await new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        { folder: env.CLOUDINARY_FOLDER, resource_type: "image" },
-        (error, res) => {
-          if (error) return reject(error);
-          if (!res) return reject(new Error("Cloudinary javob bermadi"));
-          resolve(res);
-        }
-      );
-      stream.end(file.buffer);
-    });
+    // Buffer'ni stream orqali Cloudinary'ga yuborish (Promise'ga o'raymiz).
+    // Cloudinary xatosi bo'lsa - uni tushunarli xabar bilan qaytaramiz
+    // (masalan "Invalid Signature" = API Secret noto'g'ri).
+    let result: UploadApiResponse;
+    try {
+      result = await new Promise<UploadApiResponse>((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: env.CLOUDINARY_FOLDER, resource_type: "image" },
+          (error, res) => {
+            if (error) return reject(error);
+            if (!res) return reject(new Error("Cloudinary javob bermadi"));
+            resolve(res);
+          }
+        );
+        stream.end(file.buffer);
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw AppError.badRequest(`Cloudinary yuklash xatosi: ${msg}`);
+    }
 
     // Natijani bazaga saqlaymiz (media kutubxonada ko'rinishi uchun)
     return prisma.media.create({
