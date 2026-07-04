@@ -2,7 +2,7 @@
 
 // Client-side auth: token saqlash, login/register/logout/refresh
 
-import { PUBLIC_API_URL } from "./api";
+import { PUBLIC_API_URL } from "./api-url";
 
 export interface AuthUser {
   id: string;

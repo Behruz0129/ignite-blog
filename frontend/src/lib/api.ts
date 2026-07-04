@@ -11,16 +11,9 @@ import type {
   ContentType,
   PaginationMeta,
 } from "./types";
+import { PUBLIC_API_URL as BASE_URL, PUBLIC_API_URL } from "./api-url";
 
-// Env qiymatini "tozalash" (teskari chiziq, yetishmayotgan slash va h.k.)
-function normalizeBaseUrl(raw?: string): string {
-  let u = (raw || "").trim().replace(/\\/g, "/");
-  u = u.replace(/^(https?:)\/(?!\/)/i, "$1//");
-  u = u.replace(/\/+$/, "");
-  return u || "http://localhost:5000/api";
-}
-
-const BASE_URL = normalizeBaseUrl(process.env.NEXT_PUBLIC_API_URL);
+export { PUBLIC_API_URL };
 
 const REVALIDATE_SECONDS = 60;
 
@@ -85,6 +78,3 @@ export async function getCategories() {
   );
   return res?.data ?? [];
 }
-
-// Public API base (client komponentlarda ishlatish uchun, masalan izoh yuborish)
-export const PUBLIC_API_URL = BASE_URL;

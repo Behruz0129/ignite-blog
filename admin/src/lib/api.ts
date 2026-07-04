@@ -5,19 +5,7 @@
 
 import { getToken, clearAuth } from "./auth";
 import type { ApiResponse } from "./types";
-
-// API manzilini "tozalaymiz": teskari chiziq (\) ni to'g'rilaymiz, sxemadagi
-// yetishmayotgan slashni qo'shamiz va oxiridagi ortiqcha slashlarni olib
-// tashlaymiz. Bu env qiymati biroz noto'g'ri kiritilsa ham ishlashini
-// ta'minlaydi (masalan "https:\host\api" -> "https://host/api").
-function normalizeBaseUrl(raw?: string): string {
-  let u = (raw || "").trim().replace(/\\/g, "/");
-  u = u.replace(/^(https?:)\/(?!\/)/i, "$1//"); // "https:/x" -> "https://x"
-  u = u.replace(/\/+$/, ""); // oxiridagi slashlar
-  return u || "http://localhost:5000/api";
-}
-
-const BASE_URL = normalizeBaseUrl(process.env.NEXT_PUBLIC_API_URL);
+import { API_BASE_URL as BASE_URL } from "./api-url";
 
 interface RequestOptions {
   method?: string;
