@@ -13,6 +13,7 @@ import {
   isGoogleConfigured,
   isDiscordConfigured,
   isTelegramConfigured,
+  isEmailConfigured,
 } from "../config/env";
 import type { User as PrismaUser } from "@prisma/client";
 
@@ -20,6 +21,8 @@ export const authController = {
   config: asyncHandler(async (_req: Request, res: Response) => {
     return ok(res, {
       telegramBotUsername: isTelegramConfigured ? env.TELEGRAM_BOT_USERNAME : null,
+      emailConfigured: isEmailConfigured,
+      frontendUrl: env.FRONTEND_URL,
     });
   }),
 

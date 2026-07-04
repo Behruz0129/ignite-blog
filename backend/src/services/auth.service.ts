@@ -78,7 +78,13 @@ export const authService = {
       },
     });
 
-    await emailService.sendVerification(user.email, user.name, verificationToken);
+    try {
+      await emailService.sendVerification(user.email, user.name, verificationToken);
+    } catch (err) {
+      // Email ketmasa user qolmasin — o'chiramiz va xatoni qaytaramiz
+      await prisma.user.delete({ where: { id: user.id } });
+      throw err;
+    }
 
     return {
       message:

@@ -2,12 +2,13 @@
  * EMAIL SERVICE (Resend)
  * ----------------------
  * Email tasdiqlash va parol tiklash xabarlarini yuboradi.
- * RESEND_API_KEY bo'lmasa dev rejimida console'ga yozadi.
+ * Production'da RESEND_API_KEY majburiy — bo'lmasa aniq xato qaytariladi.
  */
 
 import { Resend } from "resend";
 import { env, isEmailConfigured } from "../config/env";
 import { logger } from "../config/logger";
+import { AppError } from "../utils/AppError";
 
 let resend: Resend | null = null;
 if (isEmailConfigured) {
@@ -16,15 +17,31 @@ if (isEmailConfigured) {
 
 async function sendEmail(to: string, subject: string, html: string) {
   if (!resend) {
+    if (env.NODE_ENV === "production") {
+      throw AppError.badRequest(
+        "Email xizmati sozlanmagan. Render'da RESEND_API_KEY qo'shing."
+      );
+    }
+    // Dev: console'ga yozamiz (haqiqiy email ketmaydi)
     logger.info(`[EMAIL DEV] To: ${to} | Subject: ${subject}\n${html}`);
     return;
   }
-  await resend.emails.send({
+
+  const { data, error } = await resend.emails.send({
     from: env.EMAIL_FROM,
     to,
     subject,
     html,
   });
+
+  if (error) {
+    logger.error("Resend xatosi:", error);
+    throw AppError.badRequest(
+      `Email yuborilmadi: ${error.message}. Resend'da domen yoki EMAIL_FROM ni tekshiring.`
+    );
+  }
+
+  logger.info(`Email yuborildi: ${to} (id: ${data?.id ?? "?"})`);
 }
 
 export const emailService = {
