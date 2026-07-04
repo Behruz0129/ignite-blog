@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { login, getOAuthUrl } from "@/lib/auth-client";
+import { login, resendVerification } from "@/lib/auth-client";
 import { useAuth } from "@/components/AuthProvider";
+import AuthSocialBlock from "@/components/AuthSocialBlock";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,19 +14,33 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [needsVerify, setNeedsVerify] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setNeedsVerify(false);
     setLoading(true);
     try {
       await login(email, password);
       await refresh();
       router.push("/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Xatolik");
+      const msg = err instanceof Error ? err.message : "Xatolik";
+      setError(msg);
+      if (msg.includes("tasdiqlanmagan")) setNeedsVerify(true);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function resend() {
+    try {
+      await resendVerification(email);
+      setError("Tasdiqlash xabari qayta yuborildi. Pochtangizni tekshiring.");
+      setNeedsVerify(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Xatolik");
     }
   }
 
@@ -43,22 +58,20 @@ export default function LoginPage() {
         {error && (
           <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
+            {needsVerify && (
+              <button
+                type="button"
+                onClick={resend}
+                className="mt-2 block text-ink underline"
+              >
+                Tasdiqlash xabarini qayta yuborish
+              </button>
+            )}
           </div>
         )}
 
-        <div className="mt-6 space-y-3">
-          <a
-            href={getOAuthUrl("google")}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-line bg-paper py-3 text-sm transition hover:bg-haze"
-          >
-            Google bilan kirish
-          </a>
-          <a
-            href={getOAuthUrl("discord")}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-line bg-paper py-3 text-sm transition hover:bg-haze"
-          >
-            Discord bilan kirish
-          </a>
+        <div className="mt-6">
+          <AuthSocialBlock />
         </div>
 
         <div className="my-6 flex items-center gap-3">
@@ -84,6 +97,11 @@ export default function LoginPage() {
             placeholder="Parol"
             className="w-full rounded-xl border border-line bg-paper px-4 py-3 text-sm outline-none focus:border-ink"
           />
+          <div className="text-right">
+            <Link href="/forgot-password" className="text-xs text-ink-soft underline">
+              Parolni unutdingizmi?
+            </Link>
+          </div>
           <button
             type="submit"
             disabled={loading}

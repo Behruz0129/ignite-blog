@@ -1,13 +1,5 @@
 /**
  * AUTH SERVICE
- * ------------
- * - register: email+parol bilan yangi USER yaratadi.
- * - login: email+parol tekshiradi.
- * - issueTokens: access + refresh token yaratadi (refresh DB'ga hash bilan saqlanadi).
- * - refresh: refresh token'ni tekshiradi, rotatsiya qiladi (eski bekor, yangi beriladi).
- * - logout: refresh token'ni bekor qiladi.
- * - oauthUpsert: Google/Discord'dan kelgan profil bo'yicha user topadi yoki yaratadi.
- * - me: joriy foydalanuvchi ma'lumoti.
  */
 
 import bcrypt from "bcryptjs";
@@ -19,7 +11,15 @@ import {
   hashToken,
   refreshTokenExpiry,
 } from "../utils/token";
+import { generateSecureToken, tokenExpiryHours } from "../utils/secureToken";
 import { LoginInput, RegisterInput } from "../validators/auth.validator";
+import { emailService } from "./email.service";
+import {
+  verifyTelegramAuth,
+  sendTelegramMessage,
+  type TelegramAuthData,
+} from "./telegram.service";
+import { env } from "../config/env";
 import type { User } from "@prisma/client";
 
 function publicUser(user: User) {
@@ -30,6 +30,7 @@ function publicUser(user: User) {
     role: user.role,
     avatar: user.avatar,
     provider: user.provider,
+    emailVerified: user.emailVerified,
   };
 }
 
@@ -61,7 +62,9 @@ export const authService = {
       throw AppError.badRequest("Bu email allaqachon ro'yxatdan o'tgan");
     }
 
+    const verificationToken = generateSecureToken();
     const hashed = await bcrypt.hash(input.password, 10);
+
     const user = await prisma.user.create({
       data: {
         name: input.name,
@@ -69,10 +72,19 @@ export const authService = {
         password: hashed,
         role: "USER",
         provider: "LOCAL",
+        emailVerified: false,
+        emailVerificationToken: verificationToken,
+        emailVerificationExpires: tokenExpiryHours(24),
       },
     });
 
-    return issueTokens(user);
+    await emailService.sendVerification(user.email, user.name, verificationToken);
+
+    return {
+      message:
+        "Ro'yxatdan o'tdingiz! Emailingizga tasdiqlash havolasi yuborildi. Emailni tasdiqlang, so'ng kiring.",
+      email: user.email,
+    };
   },
 
   async login(input: LoginInput) {
@@ -80,21 +92,172 @@ export const authService = {
       where: { email: input.email },
     });
 
-    // Xavfsizlik: bir xil xabar (email mavjudligini oshkor qilmaymiz)
     if (!user) {
       throw AppError.unauthorized("Email yoki parol noto'g'ri");
     }
 
-    // OAuth orqali ochilgan akkauntda parol bo'lmasligi mumkin
     if (!user.password) {
       throw AppError.badRequest(
-        "Bu akkaunt ijtimoiy tarmoq orqali ochilgan. Google yoki Discord bilan kiring."
+        "Bu akkaunt Telegram yoki ijtimoiy tarmoq orqali ochilgan. Mos usul bilan kiring."
       );
     }
 
     const valid = await bcrypt.compare(input.password, user.password);
     if (!valid) {
       throw AppError.unauthorized("Email yoki parol noto'g'ri");
+    }
+
+    if (user.provider === "LOCAL" && !user.emailVerified) {
+      throw AppError.forbidden(
+        "Email tasdiqlanmagan. Pochtangizdagi havolani bosing yoki qayta yuborishni so'rang."
+      );
+    }
+
+    return issueTokens(user);
+  },
+
+  async verifyEmail(token: string) {
+    if (!token) throw AppError.badRequest("Token topilmadi");
+
+    const user = await prisma.user.findFirst({
+      where: {
+        emailVerificationToken: token,
+        emailVerificationExpires: { gt: new Date() },
+      },
+    });
+
+    if (!user) {
+      throw AppError.badRequest("Token yaroqsiz yoki muddati tugagan");
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationExpires: null,
+      },
+    });
+
+    return issueTokens(updated);
+  },
+
+  async resendVerification(email: string) {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return { message: "Agar email ro'yxatdan o'tgan bo'lsa, tasdiqlash xabari yuborildi" };
+    }
+    if (user.emailVerified) {
+      throw AppError.badRequest("Email allaqachon tasdiqlangan");
+    }
+    if (user.provider !== "LOCAL") {
+      throw AppError.badRequest("Bu akkaunt email tasdiqlashni talab qilmaydi");
+    }
+
+    const verificationToken = generateSecureToken();
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerificationToken: verificationToken,
+        emailVerificationExpires: tokenExpiryHours(24),
+      },
+    });
+
+    await emailService.sendVerification(user.email, user.name, verificationToken);
+    return { message: "Tasdiqlash xabari qayta yuborildi" };
+  },
+
+  async forgotPassword(email: string) {
+    const user = await prisma.user.findUnique({ where: { email } });
+    const genericMsg =
+      "Agar email ro'yxatdan o'tgan bo'lsa, parol tiklash yo'riqnomasi yuborildi";
+
+    if (!user || !user.password) {
+      return { message: genericMsg };
+    }
+
+    const resetToken = generateSecureToken();
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordResetToken: resetToken,
+        passwordResetExpires: tokenExpiryHours(1),
+      },
+    });
+
+    await emailService.sendPasswordReset(user.email, user.name, resetToken);
+
+    // Telegram bog'langan bo'lsa — bot orqali ham yuboramiz
+    if (user.telegramId) {
+      const link = `${env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+      await sendTelegramMessage(
+        user.telegramId,
+        `🔐 <b>Parolni tiklash</b>\n\nSalom, ${user.name}!\n\n<a href="${link}">Parolni tiklash</a>\n\nHavola 1 soat amal qiladi.`
+      );
+    }
+
+    return { message: genericMsg };
+  },
+
+  async resetPassword(token: string, password: string) {
+    const user = await prisma.user.findFirst({
+      where: {
+        passwordResetToken: token,
+        passwordResetExpires: { gt: new Date() },
+      },
+    });
+
+    if (!user) {
+      throw AppError.badRequest("Token yaroqsiz yoki muddati tugagan");
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashed,
+        passwordResetToken: null,
+        passwordResetExpires: null,
+      },
+    });
+
+    // Barcha refresh token'larni bekor qilamiz
+    await prisma.refreshToken.updateMany({
+      where: { userId: user.id, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+
+    return { message: "Parol muvaffaqiyatli yangilandi. Endi yangi parol bilan kiring." };
+  },
+
+  async telegramLogin(data: TelegramAuthData) {
+    verifyTelegramAuth(data);
+
+    const telegramId = String(data.id);
+    const name = [data.first_name, data.last_name].filter(Boolean).join(" ");
+
+    let user = await prisma.user.findFirst({ where: { telegramId } });
+
+    if (user) {
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          name: name || user.name,
+          avatar: data.photo_url ?? user.avatar,
+        },
+      });
+    } else {
+      user = await prisma.user.create({
+        data: {
+          name: name || data.username || "Telegram foydalanuvchi",
+          email: `telegram_${telegramId}@noemail.ignite`,
+          role: "USER",
+          provider: "TELEGRAM",
+          telegramId,
+          avatar: data.photo_url ?? null,
+          emailVerified: true,
+        },
+      });
     }
 
     return issueTokens(user);
@@ -112,7 +275,6 @@ export const authService = {
       throw AppError.unauthorized("Refresh token yaroqsiz yoki muddati tugagan");
     }
 
-    // Rotatsiya: eski token'ni bekor qilamiz, yangisini beramiz
     await prisma.refreshToken.update({
       where: { id: record.id },
       data: { revokedAt: new Date() },
@@ -130,10 +292,6 @@ export const authService = {
     return { ok: true };
   },
 
-  /**
-   * OAuth: provider ID yoki email bo'yicha user topadi, bo'lmasa yaratadi.
-   * Tokens controller tomonida beriladi (redirect uchun).
-   */
   async oauthUpsert(params: {
     provider: "GOOGLE" | "DISCORD";
     providerId: string;
@@ -143,13 +301,11 @@ export const authService = {
   }): Promise<User> {
     const providerField = params.provider === "GOOGLE" ? "googleId" : "discordId";
 
-    // 1) Provider ID bo'yicha
     let user = await prisma.user.findFirst({
       where: { [providerField]: params.providerId },
     });
     if (user) return user;
 
-    // 2) Email bo'yicha (mavjud akkauntga provider ID'ni bog'laymiz)
     if (params.email) {
       user = await prisma.user.findUnique({ where: { email: params.email } });
       if (user) {
@@ -158,12 +314,12 @@ export const authService = {
           data: {
             [providerField]: params.providerId,
             avatar: user.avatar ?? params.avatar ?? null,
+            emailVerified: true,
           },
         });
       }
     }
 
-    // 3) Yangi user (email bo'lmasa sun'iy noyob email yasaymiz)
     const email =
       params.email ??
       `${params.provider.toLowerCase()}_${params.providerId}@noemail.ignite`;
@@ -176,11 +332,11 @@ export const authService = {
         provider: params.provider,
         avatar: params.avatar ?? null,
         [providerField]: params.providerId,
+        emailVerified: true,
       },
     });
   },
 
-  // OAuth callback'da tokenlar berish uchun ochiq yordamchi
   issueTokens,
 
   async me(userId: string) {
@@ -193,6 +349,7 @@ export const authService = {
         role: true,
         avatar: true,
         provider: true,
+        emailVerified: true,
         createdAt: true,
       },
     });

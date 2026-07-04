@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useAuth } from "./AuthProvider";
-import { getOAuthUrl } from "@/lib/auth-client";
 
 const NAV = [
   { href: "/news", label: "Yangiliklar" },

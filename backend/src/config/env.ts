@@ -35,6 +35,14 @@ const envSchema = z.object({
   // Public frontend manzili (OAuth'dan keyin redirect uchun)
   FRONTEND_URL: z.string().default("http://localhost:3000"),
 
+  // --- Telegram Login ---
+  TELEGRAM_BOT_TOKEN: z.string().optional(),
+  TELEGRAM_BOT_USERNAME: z.string().optional(), // @sizsiz bot username (BotFather)
+
+  // --- Email (Resend) ---
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().default("Ignite Blog <onboarding@resend.dev>"),
+
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),
   CLOUDINARY_API_SECRET: z.string().optional(),
@@ -75,3 +83,7 @@ export const isGoogleConfigured = Boolean(
 export const isDiscordConfigured = Boolean(
   env.DISCORD_CLIENT_ID && env.DISCORD_CLIENT_SECRET
 );
+export const isTelegramConfigured = Boolean(
+  env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_BOT_USERNAME
+);
+export const isEmailConfigured = Boolean(env.RESEND_API_KEY);

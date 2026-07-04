@@ -1,7 +1,5 @@
 "use client";
 
-// Client-side auth: token saqlash, login/register/logout/refresh
-
 import { PUBLIC_API_URL } from "./api-url";
 
 export interface AuthUser {
@@ -11,6 +9,7 @@ export interface AuthUser {
   role: string;
   avatar?: string | null;
   provider?: string;
+  emailVerified?: boolean;
 }
 
 const TOKEN_KEY = "ignite_token";
@@ -61,7 +60,7 @@ async function authFetch<T>(
   if (!res.ok) {
     return { ok: false, message: json?.message || "Xatolik" };
   }
-  return { ok: true, data: json.data };
+  return { ok: true, data: json.data, message: json.message };
 }
 
 export async function login(email: string, password: string) {
@@ -80,16 +79,71 @@ export async function login(email: string, password: string) {
 }
 
 export async function register(name: string, email: string, password: string) {
-  const res = await authFetch<{
-    token: string;
-    refreshToken: string;
-    user: AuthUser;
-  }>("/auth/register", {
+  const res = await authFetch<{ message: string; email: string }>("/auth/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, email, password }),
   });
-  if (!res.ok || !res.data) throw new Error(res.message || "Ro'yxatdan o'tish xatosi");
+  if (!res.ok) throw new Error(res.message || "Ro'yxatdan o'tish xatosi");
+  return res.message || res.data?.message || "Email tasdiqlash xabari yuborildi";
+}
+
+export async function verifyEmail(token: string) {
+  const res = await authFetch<{
+    token: string;
+    refreshToken: string;
+    user: AuthUser;
+  }>("/auth/verify-email", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+  if (!res.ok || !res.data) throw new Error(res.message || "Tasdiqlash xatosi");
+  saveAuth(res.data.token, res.data.user, res.data.refreshToken);
+  return res.data.user;
+}
+
+export async function resendVerification(email: string) {
+  const res = await authFetch<{ message: string }>("/auth/resend-verification", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) throw new Error(res.message || "Xatolik");
+  return res.message || res.data?.message || "Yuborildi";
+}
+
+export async function forgotPassword(email: string) {
+  const res = await authFetch<{ message: string }>("/auth/forgot-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) throw new Error(res.message || "Xatolik");
+  return res.message || res.data?.message || "Yuborildi";
+}
+
+export async function resetPassword(token: string, password: string) {
+  const res = await authFetch<{ message: string }>("/auth/reset-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, password }),
+  });
+  if (!res.ok) throw new Error(res.message || "Xatolik");
+  return res.message || res.data?.message || "Parol yangilandi";
+}
+
+export async function telegramLogin(user: Record<string, unknown>) {
+  const res = await authFetch<{
+    token: string;
+    refreshToken: string;
+    user: AuthUser;
+  }>("/auth/telegram", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(user),
+  });
+  if (!res.ok || !res.data) throw new Error(res.message || "Telegram kirish xatosi");
   saveAuth(res.data.token, res.data.user, res.data.refreshToken);
   return res.data.user;
 }
@@ -110,10 +164,6 @@ export async function fetchMe(): Promise<AuthUser | null> {
   const token = getStoredToken();
   if (token) saveAuth(token, res.data, getStoredRefreshToken() || undefined);
   return res.data;
-}
-
-export function getOAuthUrl(provider: "google" | "discord"): string {
-  return `${PUBLIC_API_URL}/auth/${provider}`;
 }
 
 export async function authPost<T>(path: string, body: unknown): Promise<T> {

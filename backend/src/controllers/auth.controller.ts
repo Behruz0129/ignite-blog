@@ -8,18 +8,54 @@ import { asyncHandler } from "../utils/asyncHandler";
 import { authService } from "../services/auth.service";
 import { ok, created } from "../utils/apiResponse";
 import { AppError } from "../utils/AppError";
-import { env, isGoogleConfigured, isDiscordConfigured } from "../config/env";
+import {
+  env,
+  isGoogleConfigured,
+  isDiscordConfigured,
+  isTelegramConfigured,
+} from "../config/env";
 import type { User as PrismaUser } from "@prisma/client";
 
 export const authController = {
+  config: asyncHandler(async (_req: Request, res: Response) => {
+    return ok(res, {
+      telegramBotUsername: isTelegramConfigured ? env.TELEGRAM_BOT_USERNAME : null,
+    });
+  }),
+
   register: asyncHandler(async (req: Request, res: Response) => {
     const result = await authService.register(req.body);
-    return created(res, result, "Ro'yxatdan o'tdingiz");
+    return created(res, result, result.message);
   }),
 
   login: asyncHandler(async (req: Request, res: Response) => {
     const result = await authService.login(req.body);
     return ok(res, result, "Muvaffaqiyatli kirildi");
+  }),
+
+  verifyEmail: asyncHandler(async (req: Request, res: Response) => {
+    const result = await authService.verifyEmail(req.body.token);
+    return ok(res, result, "Email tasdiqlandi");
+  }),
+
+  resendVerification: asyncHandler(async (req: Request, res: Response) => {
+    const result = await authService.resendVerification(req.body.email);
+    return ok(res, result, result.message);
+  }),
+
+  forgotPassword: asyncHandler(async (req: Request, res: Response) => {
+    const result = await authService.forgotPassword(req.body.email);
+    return ok(res, result, result.message);
+  }),
+
+  resetPassword: asyncHandler(async (req: Request, res: Response) => {
+    const result = await authService.resetPassword(req.body.token, req.body.password);
+    return ok(res, result, result.message);
+  }),
+
+  telegramLogin: asyncHandler(async (req: Request, res: Response) => {
+    const result = await authService.telegramLogin(req.body);
+    return ok(res, result, "Telegram orqali muvaffaqiyatli kirildi");
   }),
 
   refresh: asyncHandler(async (req: Request, res: Response) => {
@@ -38,11 +74,8 @@ export const authController = {
     return ok(res, user);
   }),
 
-  // --- OAuth ---
   googleStart: (req: Request, res: Response, next: () => void) => {
-    if (!isGoogleConfigured) {
-      throw AppError.badRequest("Google OAuth sozlanmagan");
-    }
+    if (!isGoogleConfigured) throw AppError.badRequest("Google OAuth sozlanmagan");
     passport.authenticate("google", { session: false })(req, res, next);
   },
 
@@ -67,9 +100,7 @@ export const authController = {
   },
 
   discordStart: (req: Request, res: Response, next: () => void) => {
-    if (!isDiscordConfigured) {
-      throw AppError.badRequest("Discord OAuth sozlanmagan");
-    }
+    if (!isDiscordConfigured) throw AppError.badRequest("Discord OAuth sozlanmagan");
     passport.authenticate("discord", { session: false })(req, res, next);
   },
 

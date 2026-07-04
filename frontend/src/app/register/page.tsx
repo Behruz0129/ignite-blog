@@ -2,32 +2,45 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { register, getOAuthUrl } from "@/lib/auth-client";
-import { useAuth } from "@/components/AuthProvider";
+import { register } from "@/lib/auth-client";
+import AuthSocialBlock from "@/components/AuthSocialBlock";
 
 export default function RegisterPage() {
-  const router = useRouter();
-  const { refresh } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      await register(name, email, password);
-      await refresh();
-      router.push("/");
+      const msg = await register(name, email, password);
+      setMessage(msg);
+      setDone(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Xatolik");
     } finally {
       setLoading(false);
     }
+  }
+
+  if (done) {
+    return (
+      <div className="container-content flex min-h-[70vh] items-center justify-center py-16">
+        <div className="w-full max-w-md rounded-2xl bg-haze p-8 text-center">
+          <h1 className="text-xl font-semibold">Pochtangizni tekshiring</h1>
+          <p className="mt-3 text-sm text-ink-soft">{message}</p>
+          <Link href="/login" className="btn-primary mt-6 inline-block">
+            Login sahifasiga
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -49,19 +62,8 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <div className="mt-6 space-y-3">
-          <a
-            href={getOAuthUrl("google")}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-line bg-paper py-3 text-sm transition hover:bg-haze"
-          >
-            Google bilan
-          </a>
-          <a
-            href={getOAuthUrl("discord")}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-line bg-paper py-3 text-sm transition hover:bg-haze"
-          >
-            Discord bilan
-          </a>
+        <div className="mt-6">
+          <AuthSocialBlock />
         </div>
 
         <div className="my-6 flex items-center gap-3">

@@ -27,6 +27,7 @@ enum AuthProvider {
   LOCAL
   GOOGLE
   DISCORD
+  TELEGRAM
 }
 
 // Kontent holati: qoralama yoki chop etilgan
@@ -61,6 +62,12 @@ model User {
   avatar    String? // profil rasmi (OAuth'dan yoki yuklangan)
   googleId  String?      @unique
   discordId String?      @unique
+  telegramId String?     @unique
+  emailVerified Boolean  @default(false)
+  emailVerificationToken String? @unique
+  emailVerificationExpires DateTime?
+  passwordResetToken String? @unique
+  passwordResetExpires DateTime?
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
