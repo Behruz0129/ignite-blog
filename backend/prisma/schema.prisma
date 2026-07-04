@@ -17,8 +17,16 @@ datasource db {
 // ----------------------------- ENUMS -----------------------------
 
 enum Role {
-  ADMIN
-  EDITOR
+  SUPER_ADMIN // asosiy admin: userlarni/adminlarni boshqaradi
+  ADMIN // yordamchi admin: post + komment moderatsiya + media
+  USER // ro'yxatdan o'tgan oddiy foydalanuvchi
+}
+
+// Foydalanuvchi qanday usulda ro'yxatdan o'tgan
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+  DISCORD
 }
 
 // Kontent holati: qoralama yoki chop etilgan
@@ -44,21 +52,46 @@ enum CommentStatus {
 // ----------------------------- USERS -----------------------------
 
 model User {
-  id        String   @id @default(cuid())
+  id        String       @id @default(cuid())
   name      String
-  email     String   @unique
-  password  String // bcrypt hash sifatida saqlanadi (hech qachon ochiq matn emas)
-  role      Role     @default(EDITOR)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  email     String       @unique
+  password  String? // bcrypt hash (OAuth foydalanuvchilarida bo'lmasligi mumkin)
+  role      Role         @default(USER)
+  provider  AuthProvider @default(LOCAL)
+  avatar    String? // profil rasmi (OAuth'dan yoki yuklangan)
+  googleId  String?      @unique
+  discordId String?      @unique
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
   // Bu foydalanuvchi yaratgan kontentlar
   news     News[]
   guides   Guide[]
   opinions Opinion[]
 
+  // Foydalanuvchi faoliyati
+  comments      Comment[]
+  likes         Like[]
+  refreshTokens RefreshToken[]
+
   @@index([email])
   @@map("users")
+}
+
+// --------------------------- REFRESH TOKENS ----------------------
+// Refresh token'lar DB'da saqlanadi (bekor qilish/rotatsiya uchun).
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique // token'ning sha256 hash'i (ochiq token saqlanmaydi)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
 }
 
 // ----------------------------- NEWS ------------------------------
@@ -82,6 +115,7 @@ model News {
   categories Category[] @relation("NewsCategories")
   tags       Tag[]      @relation("NewsTags")
   comments   Comment[]
+  likes      Like[]
 
   @@index([status, publishedAt])
   @@index([slug])
@@ -110,6 +144,7 @@ model Guide {
   categories Category[] @relation("GuideCategories")
   tags       Tag[]      @relation("GuideTags")
   comments   Comment[]
+  likes      Like[]
 
   @@index([status, publishedAt])
   @@index([slug])
@@ -137,6 +172,7 @@ model Opinion {
   categories Category[] @relation("OpinionCategories")
   tags       Tag[]      @relation("OpinionTags")
   comments   Comment[]
+  likes      Like[]
 
   @@index([status, publishedAt])
   @@index([slug])
@@ -175,11 +211,15 @@ model Tag {
 
 model Comment {
   id          String        @id @default(cuid())
-  authorName  String
-  authorEmail String
+  authorName  String? // ghost (mehmon) uchun; ro'yxatdan o'tganda user'dan olinadi
+  authorEmail String? // ghost uchun
   content     String
   status      CommentStatus @default(PENDING)
   createdAt   DateTime      @default(now())
+
+  // Ro'yxatdan o'tgan foydalanuvchi (ghost bo'lsa null)
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   // Izoh qaysi kontentga tegishli (faqat bittasi to'ldiriladi)
   newsId    String?
@@ -190,7 +230,33 @@ model Comment {
   opinion   Opinion? @relation(fields: [opinionId], references: [id], onDelete: Cascade)
 
   @@index([status])
+  @@index([userId])
   @@map("comments")
+}
+
+// ------------------------------ LIKES ----------------------------
+// Har bir foydalanuvchi bitta kontentga faqat bir marta like bosa oladi.
+
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  // Like qaysi kontentga (faqat bittasi to'ldiriladi)
+  newsId    String?
+  news      News?    @relation(fields: [newsId], references: [id], onDelete: Cascade)
+  guideId   String?
+  guide     Guide?   @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  opinionId String?
+  opinion   Opinion? @relation(fields: [opinionId], references: [id], onDelete: Cascade)
+
+  // Bir user + bitta kontent uchun yagona like
+  @@unique([userId, newsId])
+  @@unique([userId, guideId])
+  @@unique([userId, opinionId])
+  @@index([userId])
+  @@map("likes")
 }
 
 // ----------------------------- MEDIA -----------------------------

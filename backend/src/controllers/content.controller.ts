@@ -22,12 +22,13 @@ export function createContentController(service: ContentService) {
       const { items, meta } = await service.list({
         ...req.query,
         onlyPublished: true,
+        userId: req.user?.id,
       });
       return paginated(res, items, meta);
     }),
 
     publicGetBySlug: asyncHandler(async (req: Request, res: Response) => {
-      const item = await service.getBySlug(req.params.slug, true);
+      const item = await service.getBySlug(req.params.slug, true, req.user?.id);
       return ok(res, item);
     }),
 

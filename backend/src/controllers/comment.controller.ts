@@ -6,19 +6,20 @@ import { Request, Response } from "express";
 import { asyncHandler } from "../utils/asyncHandler";
 import { ok, created, paginated } from "../utils/apiResponse";
 import { commentService } from "../services/comment.service";
+import { AppError } from "../utils/AppError";
 
 export const commentController = {
-  // PUBLIC: izoh qoldirish
   create: asyncHandler(async (req: Request, res: Response) => {
-    const comment = await commentService.create(req.body);
-    return created(
-      res,
-      comment,
-      "Izohingiz qabul qilindi. Moderatsiyadan keyin ko'rinadi."
-    );
+    const comment = await commentService.create({
+      ...req.body,
+      userId: req.user?.id,
+    });
+    const msg = req.user
+      ? "Izohingiz qo'shildi."
+      : "Izohingiz qabul qilindi. Moderatsiyadan keyin ko'rinadi.";
+    return created(res, comment, msg);
   }),
 
-  // ADMIN: barcha izohlar
   list: asyncHandler(async (req: Request, res: Response) => {
     const { items, meta } = await commentService.list(req.query);
     return paginated(res, items, meta);
@@ -40,7 +41,12 @@ export const commentController = {
   }),
 
   remove: asyncHandler(async (req: Request, res: Response) => {
-    const result = await commentService.remove(req.params.id);
+    if (!req.user) throw AppError.unauthorized();
+    const result = await commentService.remove(
+      req.params.id,
+      req.user.id,
+      req.user.role
+    );
     return ok(res, result, "Izoh o'chirildi");
   }),
 };

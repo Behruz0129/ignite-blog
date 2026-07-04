@@ -14,6 +14,8 @@ import opinionsRoutes from "./opinions.routes";
 import categoriesRoutes from "./categories.routes";
 import tagsRoutes from "./tags.routes";
 import commentsRoutes from "./comment.routes";
+import userRoutes from "./user.routes";
+import likeRoutes from "./like.routes";
 import mediaRoutes from "./media.routes";
 
 const router = Router();
@@ -31,6 +33,8 @@ router.use("/opinions", opinionsRoutes);
 router.use("/categories", categoriesRoutes);
 router.use("/tags", tagsRoutes);
 router.use("/comments", commentsRoutes);
+router.use("/users", userRoutes);
+router.use("/likes", likeRoutes);
 router.use("/media", mediaRoutes);
 
 export default router;

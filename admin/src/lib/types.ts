@@ -1,5 +1,7 @@
 // Backend qaytaradigan ma'lumotlar tiplari
 
+export type Role = "SUPER_ADMIN" | "ADMIN" | "USER";
+export type AuthProvider = "LOCAL" | "GOOGLE" | "DISCORD";
 export type ContentStatus = "DRAFT" | "PUBLISHED";
 export type Difficulty = "BEGINNER" | "INTERMEDIATE" | "ADVANCED";
 export type CommentStatus = "PENDING" | "APPROVED" | "REJECTED";
@@ -33,11 +35,12 @@ export interface ContentItem {
 
 export interface Comment {
   id: string;
-  authorName: string;
-  authorEmail: string;
+  authorName?: string | null;
+  authorEmail?: string | null;
   content: string;
   status: CommentStatus;
   createdAt: string;
+  user?: { id: string; name: string; avatar?: string | null } | null;
   news?: { id: string; title: string; slug: string } | null;
   guide?: { id: string; title: string; slug: string } | null;
   opinion?: { id: string; title: string; slug: string } | null;
@@ -58,7 +61,10 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: string;
+  role: Role;
+  avatar?: string | null;
+  provider?: AuthProvider;
+  createdAt?: string;
 }
 
 export interface PaginationMeta {

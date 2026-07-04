@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { saveAuth } from "@/lib/auth";
+import { saveAuth, isAdminRole } from "@/lib/auth";
 import type { User } from "@/lib/types";
 
 export default function LoginPage() {
@@ -18,11 +18,17 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const res = await api.post<{ token: string; user: User }>("/auth/login", {
-        email,
-        password,
-      });
-      saveAuth(res.data.token, res.data.user);
+      const res = await api.post<{
+        token: string;
+        refreshToken: string;
+        user: User;
+      }>("/auth/login", { email, password });
+
+      if (!isAdminRole(res.data.user.role)) {
+        throw new Error("Bu panel faqat adminlar uchun");
+      }
+
+      saveAuth(res.data.token, res.data.user, res.data.refreshToken);
       router.replace("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kirishda xatolik");

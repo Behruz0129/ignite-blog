@@ -15,7 +15,7 @@ import { idParamSchema } from "../validators/common.validator";
 
 const router = Router();
 
-router.use(authenticate, authorize("ADMIN", "EDITOR"));
+router.use(authenticate, authorize("SUPER_ADMIN", "ADMIN"));
 
 /**
  * @openapi

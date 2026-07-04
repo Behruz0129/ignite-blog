@@ -26,15 +26,17 @@ export interface ContentItem {
   categories?: Taxonomy[];
   tags?: Taxonomy[];
   author?: { id: string; name: string } | null;
-  _count?: { comments: number };
+  _count?: { comments: number; likes: number };
+  likedByMe?: boolean;
   comments?: PublicComment[];
 }
 
 export interface PublicComment {
   id: string;
-  authorName: string;
+  authorName?: string | null;
   content: string;
   createdAt: string;
+  user?: { id: string; name: string; avatar?: string | null } | null;
 }
 
 export interface PaginationMeta {

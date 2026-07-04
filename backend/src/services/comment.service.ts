@@ -1,10 +1,5 @@
 /**
  * COMMENT SERVICE
- * ---------------
- * - create: public foydalanuvchi izoh qoldiradi (avtomatik PENDING holatda).
- * - list: admin barcha izohlarni ko'radi (holat bo'yicha filter).
- * - updateStatus: APPROVED / REJECTED / PENDING.
- * - remove: o'chirish.
  */
 
 import { prisma } from "../config/prisma";
@@ -12,17 +7,17 @@ import { AppError } from "../utils/AppError";
 import { getPagination, buildMeta } from "../utils/pagination";
 
 interface CreateCommentInput {
-  authorName: string;
-  authorEmail: string;
+  authorName?: string;
+  authorEmail?: string;
   content: string;
   newsId?: string;
   guideId?: string;
   opinionId?: string;
+  userId?: string;
 }
 
 export const commentService = {
   async create(input: CreateCommentInput) {
-    // Bog'langan kontent haqiqatan mavjudligini tekshiramiz
     if (input.newsId) {
       const exists = await prisma.news.findUnique({ where: { id: input.newsId } });
       if (!exists) throw AppError.notFound("Yangilik topilmadi");
@@ -32,6 +27,33 @@ export const commentService = {
     } else if (input.opinionId) {
       const exists = await prisma.opinion.findUnique({ where: { id: input.opinionId } });
       if (!exists) throw AppError.notFound("Maqola topilmadi");
+    }
+
+    // Ro'yxatdan o'tgan user: avtomatik APPROVED
+    if (input.userId) {
+      const user = await prisma.user.findUnique({ where: { id: input.userId } });
+      if (!user) throw AppError.unauthorized();
+
+      return prisma.comment.create({
+        data: {
+          content: input.content,
+          userId: user.id,
+          authorName: user.name,
+          authorEmail: user.email,
+          newsId: input.newsId ?? null,
+          guideId: input.guideId ?? null,
+          opinionId: input.opinionId ?? null,
+          status: "APPROVED",
+        },
+        include: {
+          user: { select: { id: true, name: true, avatar: true } },
+        },
+      });
+    }
+
+    // Ghost (mehmon): ism+email majburiy, PENDING
+    if (!input.authorName || !input.authorEmail) {
+      throw AppError.badRequest("Mehmon sifatida izoh qoldirish uchun ism va email kerak");
     }
 
     return prisma.comment.create({
@@ -76,6 +98,7 @@ export const commentService = {
           news: { select: { id: true, title: true, slug: true } },
           guide: { select: { id: true, title: true, slug: true } },
           opinion: { select: { id: true, title: true, slug: true } },
+          user: { select: { id: true, name: true, avatar: true } },
         },
       }),
       prisma.comment.count({ where }),
@@ -90,9 +113,15 @@ export const commentService = {
     return prisma.comment.update({ where: { id }, data: { status } });
   },
 
-  async remove(id: string) {
+  async remove(id: string, actorId?: string, actorRole?: string) {
     const existing = await prisma.comment.findUnique({ where: { id } });
     if (!existing) throw AppError.notFound("Izoh topilmadi");
+
+    // Oddiy user faqat o'z izohini o'chira oladi
+    if (actorRole === "USER" && existing.userId !== actorId) {
+      throw AppError.forbidden("Faqat o'z izohingizni o'chira olasiz");
+    }
+
     await prisma.comment.delete({ where: { id } });
     return { id };
   },

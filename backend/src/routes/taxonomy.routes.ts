@@ -29,14 +29,14 @@ export function makeTaxonomyRouter(
   router.post(
     "/",
     authenticate,
-    authorize("ADMIN", "EDITOR"),
+    authorize("SUPER_ADMIN", "ADMIN"),
     validate(createSchema),
     ctrl.create
   );
   router.put(
     "/:id",
     authenticate,
-    authorize("ADMIN", "EDITOR"),
+    authorize("SUPER_ADMIN", "ADMIN"),
     validate(idParamSchema, "params"),
     validate(updateSchema),
     ctrl.update
@@ -44,7 +44,7 @@ export function makeTaxonomyRouter(
   router.delete(
     "/:id",
     authenticate,
-    authorize("ADMIN"),
+    authorize("SUPER_ADMIN"),
     validate(idParamSchema, "params"),
     ctrl.remove
   );

@@ -26,9 +26,10 @@ interface ListOptions {
   sort?: string;
   order?: "asc" | "desc";
   status?: "DRAFT" | "PUBLISHED";
-  category?: string; // category slug
-  tag?: string; // tag slug
-  onlyPublished?: boolean; // public API uchun true
+  category?: string;
+  tag?: string;
+  onlyPublished?: boolean;
+  userId?: string; // auth bo'lsa likedByMe uchun
 }
 
 // Yaratish/yangilash uchun keladigan ma'lumotlar
@@ -65,8 +66,34 @@ export function createContentService(model: ContentModel) {
     categories: { select: { id: true, name: true, slug: true } },
     tags: { select: { id: true, name: true, slug: true } },
     author: { select: { id: true, name: true, email: true } },
-    _count: { select: { comments: true } },
+    _count: { select: { comments: true, likes: true } },
   };
+
+  // Ro'yxat yoki bitta elementga likedByMe qo'shish
+  async function enrichLikedByMe<T extends { id: string }>(
+    items: T[],
+    userId?: string
+  ): Promise<(T & { likedByMe?: boolean })[]> {
+    if (!userId || items.length === 0) return items;
+
+    const ids = items.map((i) => i.id);
+    const likes = await prisma.like.findMany({
+      where: {
+        userId,
+        ...(model === "news"
+          ? { newsId: { in: ids } }
+          : model === "guide"
+            ? { guideId: { in: ids } }
+            : { opinionId: { in: ids } }),
+      },
+      select: { newsId: true, guideId: true, opinionId: true },
+    });
+
+    const likedSet = new Set(
+      likes.map((l) => l.newsId || l.guideId || l.opinionId)
+    );
+    return items.map((item) => ({ ...item, likedByMe: likedSet.has(item.id) }));
+  }
 
   return {
     /**
@@ -119,13 +146,14 @@ export function createContentService(model: ContentModel) {
         delegate.count({ where }),
       ]);
 
-      return { items, meta: buildMeta(total, page, limit) };
+      const enriched = await enrichLikedByMe(items, opts.userId);
+      return { items: enriched, meta: buildMeta(total, page, limit) };
     },
 
     /**
      * Slug bo'yicha bitta yozuv (asosan public sayt uchun).
      */
-    async getBySlug(slug: string, onlyPublished = false) {
+    async getBySlug(slug: string, onlyPublished = false, userId?: string) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const where: any = { slug };
       const item = await delegate.findUnique({
@@ -140,6 +168,7 @@ export function createContentService(model: ContentModel) {
               authorName: true,
               content: true,
               createdAt: true,
+              user: { select: { id: true, name: true, avatar: true } },
             },
           },
         },
@@ -149,7 +178,19 @@ export function createContentService(model: ContentModel) {
       if (onlyPublished && item.status !== "PUBLISHED") {
         throw AppError.notFound("Kontent topilmadi");
       }
-      return item;
+
+      let likedByMe = false;
+      if (userId) {
+        const likeWhere =
+          model === "news"
+            ? { userId, newsId: item.id }
+            : model === "guide"
+              ? { userId, guideId: item.id }
+              : { userId, opinionId: item.id };
+        likedByMe = Boolean(await prisma.like.findFirst({ where: likeWhere }));
+      }
+
+      return { ...item, likedByMe };
     },
 
     /**

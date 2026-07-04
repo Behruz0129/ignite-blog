@@ -21,7 +21,7 @@ const router = Router();
 router.get(
   "/stats",
   authenticate,
-  authorize("ADMIN", "EDITOR"),
+  authorize("SUPER_ADMIN", "ADMIN"),
   dashboardController.stats
 );
 

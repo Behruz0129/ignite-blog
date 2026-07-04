@@ -2,11 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { isLoggedIn } from "@/lib/auth";
+import { isLoggedIn, getUser, isAdminRole } from "@/lib/auth";
 import Sidebar from "@/components/Sidebar";
 
-// (dashboard) - "route group". URL'ga ta'sir qilmaydi, lekin ichidagi
-// barcha sahifalar shu layout (sidebar + himoya) ostida bo'ladi.
 export default function DashboardLayout({
   children,
 }: {
@@ -18,9 +16,14 @@ export default function DashboardLayout({
   useEffect(() => {
     if (!isLoggedIn()) {
       router.replace("/login");
-    } else {
-      setReady(true);
+      return;
     }
+    const user = getUser();
+    if (!isAdminRole(user?.role)) {
+      router.replace("/login");
+      return;
+    }
+    setReady(true);
   }, [router]);
 
   if (!ready) {

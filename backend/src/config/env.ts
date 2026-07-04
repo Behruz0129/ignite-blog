@@ -21,7 +21,19 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL majburiy"),
 
   JWT_SECRET: z.string().min(10, "JWT_SECRET kamida 10 belgidan iborat bo'lishi kerak"),
-  JWT_EXPIRES_IN: z.string().default("7d"),
+  JWT_EXPIRES_IN: z.string().default("7d"), // access token muddati
+  REFRESH_TOKEN_DAYS: z.coerce.number().default(30), // refresh token muddati (kun)
+
+  // --- OAuth (ixtiyoriy; to'ldirilmasa o'sha provayder o'chiq bo'ladi) ---
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  DISCORD_CLIENT_ID: z.string().optional(),
+  DISCORD_CLIENT_SECRET: z.string().optional(),
+  // Backend'ning ommaviy manzili (OAuth callback qurish uchun), masalan:
+  // https://ignite-api-7qhs.onrender.com
+  OAUTH_CALLBACK_BASE: z.string().default("http://localhost:5000"),
+  // Public frontend manzili (OAuth'dan keyin redirect uchun)
+  FRONTEND_URL: z.string().default("http://localhost:3000"),
 
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),
@@ -55,3 +67,11 @@ export const isCloudinaryConfigured = Boolean(
 
 // CORS origin ro'yxatini massivga aylantiramiz
 export const corsOrigins = env.CORS_ORIGIN.split(",").map((o) => o.trim());
+
+// OAuth provayderlar sozlanganligini bilish uchun yordamchilar
+export const isGoogleConfigured = Boolean(
+  env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
+);
+export const isDiscordConfigured = Boolean(
+  env.DISCORD_CLIENT_ID && env.DISCORD_CLIENT_SECRET
+);

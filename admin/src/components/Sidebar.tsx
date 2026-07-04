@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { clearAuth, getUser } from "@/lib/auth";
+import { clearAuth, getUser, isSuperAdmin } from "@/lib/auth";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: "📊" },
@@ -15,10 +15,16 @@ const NAV = [
   { href: "/media", label: "Media", icon: "🖼️" },
 ];
 
+const SUPER_NAV = { href: "/users", label: "Foydalanuvchilar", icon: "👥" };
+
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const user = getUser();
+
+  const navItems = isSuperAdmin(user?.role)
+    ? [...NAV.slice(0, 4), SUPER_NAV, ...NAV.slice(4)]
+    : NAV;
 
   function logout() {
     clearAuth();
@@ -33,7 +39,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {NAV.map((item) => {
+        {navItems.map((item) => {
           const active =
             pathname === item.href || pathname.startsWith(item.href + "/");
           return (
@@ -56,6 +62,7 @@ export default function Sidebar() {
       <div className="border-t border-slate-700 px-4 py-4">
         <p className="truncate text-sm font-medium text-white">{user?.name}</p>
         <p className="truncate text-xs text-slate-400">{user?.email}</p>
+        <p className="mt-1 text-[11px] text-slate-500">{user?.role}</p>
         <button
           onClick={logout}
           className="mt-3 w-full rounded-lg bg-slate-800 py-2 text-sm text-slate-200 transition hover:bg-red-600 hover:text-white"

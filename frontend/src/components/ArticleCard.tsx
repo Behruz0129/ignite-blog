@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { ContentItem, ContentType } from "@/lib/types";
 import { formatDate, readingTime } from "@/lib/format";
+import ArticleCardFooter from "./ArticleCardFooter";
 
 interface Props {
   item: ContentItem;
@@ -64,9 +65,15 @@ export default function ArticleCard({ item, type, featured = false }: Props) {
         )}
 
         <div className="mt-4 flex items-center gap-2 text-[12px] text-ink-soft">
-          <span>{readingTime(item.content)} daqiqa o'qish</span>
+          <span>{readingTime(item.content)} daqiqa o&apos;qish</span>
+          <ArticleCardFooter
+            contentId={item.id}
+            type={type}
+            likeCount={item._count?.likes}
+            likedByMe={item.likedByMe}
+          />
           <span className="ml-auto inline-flex items-center gap-1 font-medium text-ink transition group-hover:gap-2">
-            O'qish →
+            O&apos;qish →
           </span>
         </div>
       </div>

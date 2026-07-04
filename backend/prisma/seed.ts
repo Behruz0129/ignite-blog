@@ -43,12 +43,13 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },
-    update: {}, // mavjud bo'lsa parolni qayta yozmaymiz
+    update: { role: Role.SUPER_ADMIN }, // asosiy admin har doim SUPER_ADMIN
     create: {
       name: adminName,
       email: adminEmail,
       password: hashedPassword,
-      role: Role.ADMIN,
+      role: Role.SUPER_ADMIN,
+      provider: "LOCAL",
     },
   });
 

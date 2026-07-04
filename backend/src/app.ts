@@ -18,6 +18,7 @@ import swaggerUi from "swagger-ui-express";
 import { corsOrigins, env } from "./config/env";
 import { logger } from "./config/logger";
 import { swaggerSpec } from "./config/swagger";
+import { configurePassport } from "./config/passport";
 import { apiLimiter } from "./middlewares/rateLimit.middleware";
 import { notFound } from "./middlewares/notFound.middleware";
 import { errorHandler } from "./middlewares/error.middleware";
@@ -52,6 +53,9 @@ export function createApp(): Application {
   // 4) Body parserlar (JSON va form). Limit - katta kontent (maqolalar) uchun.
   app.use(express.json({ limit: "2mb" }));
   app.use(express.urlencoded({ extended: true }));
+
+  // Passport (OAuth) — sessiyasiz
+  app.use(configurePassport().initialize());
 
   // 5) HTTP so'rovlar logi (logging middleware)
   const morganFormat = env.NODE_ENV === "development" ? "dev" : "combined";

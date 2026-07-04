@@ -21,7 +21,7 @@ import { Router } from "express";
 import { AnyZodObject } from "zod";
 import { createContentService } from "../services/content.service";
 import { createContentController } from "../controllers/content.controller";
-import { authenticate, authorize } from "../middlewares/auth.middleware";
+import { authenticate, authorize, optionalAuth } from "../middlewares/auth.middleware";
 import { validate } from "../middlewares/validate.middleware";
 import {
   listQuerySchema,
@@ -40,14 +40,14 @@ export function makeContentRouter(
   const ctrl = createContentController(service);
 
   // --- PUBLIC ---
-  router.get("/", validate(listQuerySchema, "query"), ctrl.publicList);
+  router.get("/", optionalAuth, validate(listQuerySchema, "query"), ctrl.publicList);
 
   // --- ADMIN ---
   // Diqqat: aniq yo'llar (/admin/...) dinamik /:slug dan OLDIN turishi kerak.
   router.get(
     "/admin/all",
     authenticate,
-    authorize("ADMIN", "EDITOR"),
+    authorize("SUPER_ADMIN", "ADMIN"),
     validate(listQuerySchema, "query"),
     ctrl.adminList
   );
@@ -55,7 +55,7 @@ export function makeContentRouter(
   router.get(
     "/admin/:id",
     authenticate,
-    authorize("ADMIN", "EDITOR"),
+    authorize("SUPER_ADMIN", "ADMIN"),
     validate(idParamSchema, "params"),
     ctrl.adminGetById
   );
@@ -63,7 +63,7 @@ export function makeContentRouter(
   router.post(
     "/",
     authenticate,
-    authorize("ADMIN", "EDITOR"),
+    authorize("SUPER_ADMIN", "ADMIN"),
     validate(createSchema),
     ctrl.create
   );
@@ -71,7 +71,7 @@ export function makeContentRouter(
   router.put(
     "/:id",
     authenticate,
-    authorize("ADMIN", "EDITOR"),
+    authorize("SUPER_ADMIN", "ADMIN"),
     validate(idParamSchema, "params"),
     validate(updateSchema),
     ctrl.update
@@ -80,7 +80,7 @@ export function makeContentRouter(
   router.delete(
     "/:id",
     authenticate,
-    authorize("ADMIN", "EDITOR"),
+    authorize("SUPER_ADMIN", "ADMIN"),
     validate(idParamSchema, "params"),
     ctrl.remove
   );
@@ -88,7 +88,7 @@ export function makeContentRouter(
   router.patch(
     "/:id/publish",
     authenticate,
-    authorize("ADMIN", "EDITOR"),
+    authorize("SUPER_ADMIN", "ADMIN"),
     validate(idParamSchema, "params"),
     ctrl.publish
   );
@@ -96,13 +96,13 @@ export function makeContentRouter(
   router.patch(
     "/:id/unpublish",
     authenticate,
-    authorize("ADMIN", "EDITOR"),
+    authorize("SUPER_ADMIN", "ADMIN"),
     validate(idParamSchema, "params"),
     ctrl.unpublish
   );
 
   // Public slug route - eng oxirida (boshqa yo'llarni "yutib yubormasligi" uchun)
-  router.get("/:slug", validate(slugParamSchema, "params"), ctrl.publicGetBySlug);
+  router.get("/:slug", optionalAuth, validate(slugParamSchema, "params"), ctrl.publicGetBySlug);
 
   return router;
 }

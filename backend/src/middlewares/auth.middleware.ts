@@ -2,40 +2,57 @@
  * AUTH MIDDLEWARE
  * ---------------
  * - authenticate: so'rovda yaroqli JWT bo'lishini talab qiladi.
- *   Token "Authorization: Bearer <token>" sarlavhasida keladi.
- *   Token ichidagi foydalanuvchi ma'lumotini req.user ga yozadi.
- * - authorize: faqat ma'lum rollarga ruxsat beradi (masalan ADMIN).
+ * - optionalAuth: token bo'lsa req.user ga yozadi, bo'lmasa davom etadi.
+ * - authorize: faqat ma'lum rollarga ruxsat beradi.
  */
 
 import { Request, Response, NextFunction } from "express";
-import { verifyToken, JwtPayload } from "../utils/token";
+import { verifyToken } from "../utils/token";
 import { AppError } from "../utils/AppError";
 
-// Express'ning Request tipiga "user" maydonini qo'shamiz
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
-    interface Request {
-      user?: JwtPayload;
+    interface User {
+      id: string;
+      email: string;
+      role: string;
+      name?: string;
+      avatar?: string | null;
+      provider?: string;
     }
   }
 }
 
-export function authenticate(req: Request, _res: Response, next: NextFunction) {
+function extractToken(req: Request): string | null {
   const header = req.headers.authorization;
+  if (!header || !header.startsWith("Bearer ")) return null;
+  return header.split(" ")[1];
+}
 
-  if (!header || !header.startsWith("Bearer ")) {
+export function authenticate(req: Request, _res: Response, next: NextFunction) {
+  const token = extractToken(req);
+  if (!token) {
     throw AppError.unauthorized("Token topilmadi. Iltimos, tizimga kiring.");
   }
-
-  const token = header.split(" ")[1];
-
   try {
     req.user = verifyToken(token);
     next();
   } catch {
     throw AppError.unauthorized("Token yaroqsiz yoki muddati tugagan.");
   }
+}
+
+/** Token bo'lsa user'ni qo'shadi, bo'lmasa req.user undefined qoladi */
+export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
+  const token = extractToken(req);
+  if (!token) return next();
+  try {
+    req.user = verifyToken(token);
+  } catch {
+    // Yaroqsiz token — mehmon sifatida davom etamiz
+  }
+  next();
 }
 
 export function authorize(...roles: string[]) {

@@ -8,6 +8,7 @@ import {
   DIFFICULTY_LABEL,
 } from "@/lib/format";
 import CommentSection from "./CommentSection";
+import LikeButton from "./LikeButton";
 
 // Bitta material (detal) sahifasi ko'rinishi.
 export default function ContentArticle({
@@ -51,7 +52,7 @@ export default function ContentArticle({
             <p className="mt-5 text-lg text-ink-soft">{item.excerpt}</p>
           )}
 
-          <div className="mt-6 flex items-center gap-3 text-sm text-ink-soft">
+          <div className="mt-6 flex flex-wrap items-center gap-3 text-sm text-ink-soft">
             {item.author?.name && (
               <>
                 <span className="font-medium text-ink">
@@ -63,6 +64,13 @@ export default function ContentArticle({
             <span>{formatDate(item.publishedAt || item.createdAt)}</span>
             <span>·</span>
             <span>{readingTime(item.content)} daqiqa</span>
+            <span>·</span>
+            <LikeButton
+              contentId={item.id}
+              type={type}
+              initialCount={item._count?.likes ?? 0}
+              initialLiked={item.likedByMe ?? false}
+            />
           </div>
         </header>
       </div>
