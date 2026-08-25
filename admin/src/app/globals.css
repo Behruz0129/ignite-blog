@@ -305,3 +305,62 @@
 .tiptap-content pre .hljs-function .hljs-title {
   color: #b9a6ff;
 }
+
+/* ---------------------------------------------------------------- muharrir: `/` menyusi */
+
+.slash-menu {
+  @apply max-h-[320px] w-[280px] overflow-y-auto rounded-xl border border-line bg-paper p-1.5 shadow-pop;
+}
+
+.slash-item {
+  @apply flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition;
+}
+
+.slash-item.is-active {
+  @apply bg-canvas;
+}
+
+.slash-item-icon {
+  @apply flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border border-line bg-paper text-ink-soft;
+}
+
+.slash-item.is-active .slash-item-icon {
+  @apply border-line-strong text-ink;
+}
+
+/* Tippy o'zining standart fonini chizmasin — ko'rinish .slash-menu dan olinadi. */
+.tippy-box {
+  @apply bg-transparent;
+}
+
+.tippy-box > .tippy-content {
+  @apply p-0;
+}
+
+/* ---------------------------------------------------------------- muharrir: yangi bloklar */
+
+.tiptap-content mark {
+  @apply rounded bg-brand-soft px-0.5 text-ink;
+}
+
+.tiptap-content u {
+  text-underline-offset: 3px;
+}
+
+/* YouTube: Tiptap iframe'ni div bilan o'raydi */
+.tiptap-content div[data-youtube-video] {
+  @apply my-5 overflow-hidden rounded-xl border border-line;
+}
+
+.tiptap-content div[data-youtube-video] iframe {
+  @apply aspect-video h-auto w-full;
+}
+
+/* Rasm ustiga sudralganda chegara ko'rinsin */
+.tiptap-content img {
+  @apply rounded-lg;
+}
+
+.tiptap-content .ProseMirror-selectednode {
+  @apply outline outline-2 outline-brand;
+}

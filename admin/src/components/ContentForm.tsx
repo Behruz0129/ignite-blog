@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import type { ContentConfig } from "@/lib/contentConfig";
+import { clearDraft, readDraft, saveDraft, savedAgo } from "@/lib/draft";
 import type { ContentItem, Taxonomy } from "@/lib/types";
 import Editor from "./Editor";
 import MediaPicker from "./MediaPicker";
@@ -68,7 +69,12 @@ export default function ContentForm({ config, id }: ContentFormProps) {
   const [error, setError] = useState("");
   const [picker, setPicker] = useState<null | "featured" | "editor">(null);
   const [seoOpen, setSeoOpen] = useState(false);
+  const [draftFound, setDraftFound] = useState<number | null>(null);
+  const [autoSavedAt, setAutoSavedAt] = useState<number | null>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
+  // Boshlang'ich yuklash tugagunча avtomatik saqlash ishga tushmasin — aks
+  // holda bo'sh forma bazadan kelgan matn ustiga yozilib qolardi.
+  const readyForAutosave = useRef(false);
 
   // Sarlavha maydoni matnga qarab o'sadi. Yozganda ham, yozuv bazadan
   // yuklanganda ham balandlikni qayta hisoblash kerak — aks holda uzun
@@ -103,14 +109,35 @@ export default function ContentForm({ config, id }: ContentFormProps) {
           });
         })
         .catch((e) => setError(e.message))
-        .finally(() => setLoadingItem(false));
+        .finally(() => {
+          setLoadingItem(false);
+          readyForAutosave.current = true;
+        });
+    } else {
+      readyForAutosave.current = true;
     }
+
+    const backup = readDraft<FormState>(config.type, id);
+    if (backup) setDraftFound(backup.savedAt);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   useEffect(() => {
     autoGrow(titleRef.current);
   }, [form.title]);
+
+  // Har bosilgan tugmadan keyin emas, tinch qolgandan so'ng saqlaymiz.
+  useEffect(() => {
+    if (!readyForAutosave.current) return;
+    if (!form.title.trim() && !form.content.trim()) return;
+
+    const timer = setTimeout(() => {
+      saveDraft(config.type, id, form);
+      setAutoSavedAt(Date.now());
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [form, config.type, id]);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -166,6 +193,9 @@ export default function ContentForm({ config, id }: ContentFormProps) {
       } else {
         await api.post(config.apiPath, payload);
       }
+
+      // Server qabul qildi — brauzerdagi zaxira endi keraksiz.
+      clearDraft(config.type, id);
 
       toast.success(
         status === "PUBLISHED"
@@ -233,10 +263,47 @@ export default function ContentForm({ config, id }: ContentFormProps) {
         </div>
       </div>
 
+      {autoSavedAt !== null && (
+        <div className="mb-3 text-right text-[12px] text-ink-faint">
+          Brauzerda saqlandi · {savedAgo(autoSavedAt)}
+        </div>
+      )}
+
       {error && (
         <div className="mb-4 flex items-start gap-2 rounded-lg border border-danger/20 bg-danger-soft px-4 py-3 text-sm text-danger">
           <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0" />
           <span>{error}</span>
+        </div>
+      )}
+
+      {/* Saqlanmagan matn topildi: yopilib ketgan oynadan keyin tiklash imkoni */}
+      {draftFound !== null && (
+        <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-line-strong bg-canvas px-4 py-3 text-sm">
+          <Icon name="alert" className="h-4 w-4 shrink-0 text-ink-soft" />
+          <span className="text-ink-soft">
+            Saqlanmagan matn bor ({savedAgo(draftFound)} yozilgan).
+          </span>
+          <button
+            type="button"
+            className="font-medium text-brand underline underline-offset-2"
+            onClick={() => {
+              const backup = readDraft<FormState>(config.type, id);
+              if (backup) setForm(backup.data);
+              setDraftFound(null);
+            }}
+          >
+            Tiklash
+          </button>
+          <button
+            type="button"
+            className="text-ink-faint underline underline-offset-2"
+            onClick={() => {
+              clearDraft(config.type, id);
+              setDraftFound(null);
+            }}
+          >
+            O'chirish
+          </button>
         </div>
       )}
 

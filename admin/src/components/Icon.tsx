@@ -40,6 +40,11 @@ export type IconName =
   | "bold"
   | "italic"
   | "strike"
+  | "video"
+  | "highlight"
+  | "underline"
+  | "alignLeft"
+  | "alignCenter"
   | "h1"
   | "h2"
   | "h3"
@@ -147,6 +152,11 @@ const PATHS: Record<IconName, string[]> = {
   redo: ["M20 9h-9.5a5 5 0 0 0 0 10H15", "M16 5l4 4-4 4"],
   expand: ["M4 9V4h5", "M20 9V4h-5", "M4 15v5h5", "M20 15v5h-5"],
   collapse: ["M9 4v5H4", "M15 4v5h5", "M9 20v-5H4", "M15 20v-5h5"],
+  video: ["M4 6.5h11a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2v-7a2 2 0 012-2z", "M17 10.5l5-3v9l-5-3"],
+  highlight: ["M4 20h16", "M6.5 16.5l7-7 4 4-7 7h-4v-4z", "M13 7l4 4"],
+  underline: ["M7 4v6a5 5 0 0010 0V4", "M5 20h14"],
+  alignLeft: ["M4 6h16", "M4 12h10", "M4 18h13"],
+  alignCenter: ["M4 6h16", "M7 12h10", "M5 18h14"],
   rule: ["M4 12h16"],
 };
 

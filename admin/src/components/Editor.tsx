@@ -15,6 +15,13 @@ import TableRow from "@tiptap/extension-table-row";
 import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
+import Underline from "@tiptap/extension-underline";
+import Highlight from "@tiptap/extension-highlight";
+import TextAlign from "@tiptap/extension-text-align";
+import Youtube from "@tiptap/extension-youtube";
+import { createSlashCommand } from "./editor/slash-command";
+import { api } from "@/lib/api";
+import type { Media } from "@/lib/types";
 import { createLowlight, common } from "lowlight";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Icon, { type IconName } from "./Icon";
@@ -32,6 +39,37 @@ interface EditorProps {
 function modKey(): string {
   if (typeof navigator === "undefined") return "Ctrl";
   return /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl";
+}
+
+
+/**
+ * Rasmni Cloudinary'ga yuklab, kursor turgan joyga qo'yadi. Skrinshotni
+ * to'g'ridan-to'g'ri Ctrl+V bilan tashlash yoki faylni sudrab olib kelish
+ * uchun — yozayotganda media kutubxonani ochib o'tirish shart bo'lmasin.
+ *
+ * Yuklanish holati status panelida ko'rsatiladi (`onBusy`), shuning uchun
+ * matnga vaqtinchalik "yuklanmoqda" bloki qo'yilmaydi: u bekor qilinganda
+ * yoki xato bo'lganda matnni tozalash chalkash bo'lardi.
+ */
+async function uploadImage(
+  editor: TiptapEditor,
+  file: File,
+  onBusy: (busy: boolean) => void
+) {
+  if (!file.type.startsWith("image/")) return;
+
+  onBusy(true);
+  try {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await api.upload<Media>("/media/upload", fd);
+    editor.chain().focus().setImage({ src: res.data.url }).run();
+  } catch (error) {
+    console.error("Rasm yuklanmadi", error);
+    window.alert("Rasm yuklanmadi. Qaytadan urinib ko'ring.");
+  } finally {
+    onBusy(false);
+  }
 }
 
 // ---------------------------------------------------------------- tugma
@@ -222,6 +260,20 @@ function Toolbar({
         active={editor.isActive("code")}
       />
 
+      <Btn
+        icon="underline"
+        title="Tagi chizilgan"
+        shortcut={`${mod}+U`}
+        onClick={() => editor.chain().focus().toggleUnderline().run()}
+        active={editor.isActive("underline")}
+      />
+      <Btn
+        icon="highlight"
+        title="Ajratib belgilash"
+        onClick={() => editor.chain().focus().toggleHighlight().run()}
+        active={editor.isActive("highlight")}
+      />
+
       <Divider />
 
       {/* Sarlavhalar */}
@@ -305,6 +357,30 @@ function Toolbar({
         title={onPickImage ? "Media kutubxonadan rasm" : "Rasm (URL)"}
         onClick={() => (onPickImage ? onPickImage() : addImageByUrl())}
       />
+      <Btn
+        icon="video"
+        title="YouTube video"
+        onClick={() => {
+          const url = window.prompt("YouTube havolasi:");
+          if (url) editor.chain().focus().setYoutubeVideo({ src: url }).run();
+        }}
+      />
+
+      <Divider />
+
+      {/* Tekislash */}
+      <Btn
+        icon="alignLeft"
+        title="Chapga tekislash"
+        onClick={() => editor.chain().focus().setTextAlign("left").run()}
+        active={editor.isActive({ textAlign: "left" })}
+      />
+      <Btn
+        icon="alignCenter"
+        title="Markazga tekislash"
+        onClick={() => editor.chain().focus().setTextAlign("center").run()}
+        active={editor.isActive({ textAlign: "center" })}
+      />
 
       <Divider />
 
@@ -374,6 +450,10 @@ function Toolbar({
 export default function Editor({ value, onChange, onPickImage }: EditorProps) {
   const [fullscreen, setFullscreen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  // `editorProps` ichidagi ishlovchilar `editor` e'lon qilinishidan oldin
+  // yoziladi, shuning uchun unga ref orqali murojaat qilinadi.
+  const editorRef = useRef<TiptapEditor | null>(null);
   const [stats, setStats] = useState({ words: 0, chars: 0 });
 
   const recalc = useCallback((ed: TiptapEditor) => {
@@ -405,6 +485,11 @@ export default function Editor({ value, onChange, onPickImage }: EditorProps) {
       TableRow,
       TableHeader,
       TableCell,
+      Underline,
+      Highlight.configure({ multicolor: false }),
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
+      Youtube.configure({ width: 840, height: 472, nocookie: true }),
+      createSlashCommand({ onPickImage }),
     ],
     content: value,
     onUpdate: ({ editor }) => {
@@ -414,6 +499,40 @@ export default function Editor({ value, onChange, onPickImage }: EditorProps) {
     onCreate: ({ editor }) => recalc(editor),
     editorProps: {
       attributes: { class: "tiptap-content" },
+
+      // Skrinshotni Ctrl+V bilan qo'yish.
+      handlePaste: (_view, event) => {
+        const files = Array.from(event.clipboardData?.files ?? []);
+        const images = files.filter((f) => f.type.startsWith("image/"));
+        if (!images.length) return false;
+
+        const ed = editorRef.current;
+        if (!ed) return false;
+
+        event.preventDefault();
+        for (const file of images) {
+          void uploadImage(ed, file, setUploading);
+        }
+        return true;
+      },
+
+      // Faylni muharrir ustiga sudrab tashlash.
+      handleDrop: (_view, event) => {
+        const files = Array.from(
+          (event as DragEvent).dataTransfer?.files ?? []
+        );
+        const images = files.filter((f) => f.type.startsWith("image/"));
+        if (!images.length) return false;
+
+        const ed = editorRef.current;
+        if (!ed) return false;
+
+        event.preventDefault();
+        for (const file of images) {
+          void uploadImage(ed, file, setUploading);
+        }
+        return true;
+      },
       // Mod+K — havola oynasi. Tiptap'da bu birikma standart emas, shuning
       // uchun qo'lda ushlaymiz (toolbar ipucu shuni va'da qiladi).
       handleKeyDown: (_view, event) => {
@@ -426,6 +545,10 @@ export default function Editor({ value, onChange, onPickImage }: EditorProps) {
       },
     },
   });
+
+  useEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
 
   // Tashqaridan value o'zgarsa (tahrirlash sahifasi yuklanganda) sinxronlash
   useEffect(() => {
@@ -544,10 +667,16 @@ export default function Editor({ value, onChange, onPickImage }: EditorProps) {
         <span>
           {stats.words} so'z · {stats.chars} belgi · ~{minutes} daqiqa o'qish
         </span>
-        <span className="hidden sm:inline">
-          {fullscreen
-            ? "Chiqish uchun Esc"
-            : `Qalin ${modKey()}+B · Havola ${modKey()}+K`}
+        <span className="flex items-center gap-2">
+          {uploading && (
+            <span className="flex items-center gap-1.5 text-brand">
+              <Icon name="spinner" className="h-3.5 w-3.5 animate-spin" />
+              Rasm yuklanmoqda…
+            </span>
+          )}
+          <span className="hidden sm:inline">
+            {fullscreen ? "Chiqish uchun Esc" : "Blok qo'shish uchun /"}
+          </span>
         </span>
       </div>
     </div>
