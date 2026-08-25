@@ -11,9 +11,16 @@ export function formatDate(dateStr?: string | null): string {
   });
 }
 
-// HTML'dan taxminiy o'qish vaqti (daqiqa)
-export function readingTime(html: string): number {
-  const text = html.replace(/<[^>]+>/g, " ");
+// Taxminiy o'qish vaqti (daqiqa).
+// Odatda backend uni tayyor holda beradi (`readingMinutes`) — ro'yxat
+// endpointlari maqola matnini umuman yubormaydi. Agar biror sababga ko'ra
+// kelmasa, mavjud matndan hisoblab beramiz.
+export function readingTime(item: {
+  readingMinutes?: number | null;
+  content?: string | null;
+}): number {
+  if (item.readingMinutes && item.readingMinutes > 0) return item.readingMinutes;
+  const text = (item.content || "").replace(/<[^>]+>/g, " ");
   const words = text.trim().split(/\s+/).filter(Boolean).length;
   return Math.max(1, Math.round(words / 200));
 }

@@ -51,7 +51,7 @@ export default function FeaturedHero({
             </p>
           )}
           <p className="mt-4 text-[13px] text-white/70">
-            {readingTime(item.content)} daqiqa o'qish
+            {readingTime(item)} daqiqa o'qish
           </p>
         </div>
       </div>

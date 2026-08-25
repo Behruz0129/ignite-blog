@@ -14,6 +14,8 @@
 import { prisma } from "../config/prisma";
 import { AppError } from "../utils/AppError";
 import { slugify, generateUniqueSlug } from "../utils/slugify";
+import { calcReadingMinutes } from "../utils/readingTime";
+import { sanitizeContent } from "../utils/sanitizeContent";
 import { getPagination, buildMeta } from "../utils/pagination";
 
 // Qaysi model bilan ishlayotganimiz
@@ -67,6 +69,37 @@ export function createContentService(model: ContentModel) {
     tags: { select: { id: true, name: true, slug: true } },
     author: { select: { id: true, name: true, email: true } },
     _count: { select: { comments: true, likes: true } },
+  };
+
+  /**
+   * RO'YXAT uchun maydonlar.
+   *
+   * Diqqat: bu yerda ataylab `select` ishlatiladi, `include` emas. `include`
+   * bilan Prisma BARCHA skalyar maydonlarni qaytaradi — shu jumladan
+   * `content`, ya'ni maqolaning to'liq HTML matni. Bosh sahifa 11 ta element
+   * so'raganda bu yuzlab kilobayt keraksiz trafik demakdir (ro'yxatda matn
+   * umuman ko'rsatilmaydi). Shuning uchun `content` faqat bitta yozuv
+   * so'ralganda (getBySlug / getById) qaytariladi.
+   *
+   * "N daqiqa o'qish" yozuvi uchun `readingMinutes` yozish paytida
+   * hisoblanib bazada saqlanadi.
+   */
+  const listSelect = {
+    id: true,
+    title: true,
+    slug: true,
+    excerpt: true,
+    featuredImage: true,
+    metaTitle: true,
+    metaDescription: true,
+    status: true,
+    publishedAt: true,
+    readingMinutes: true,
+    createdAt: true,
+    updatedAt: true,
+    authorId: true,
+    ...(model === "guide" ? { difficulty: true } : {}),
+    ...includeRelations,
   };
 
   // Ro'yxat yoki bitta elementga likedByMe qo'shish
@@ -138,7 +171,7 @@ export function createContentService(model: ContentModel) {
       const [items, total] = await Promise.all([
         delegate.findMany({
           where,
-          include: includeRelations,
+          select: listSelect,
           orderBy: { [sortField]: order },
           skip,
           take: limit,
@@ -218,17 +251,22 @@ export function createContentService(model: ContentModel) {
       // status PUBLISHED bo'lsa va publishedAt yo'q bo'lsa - hozirgi vaqt
       const publishedAt = input.status === "PUBLISHED" ? new Date() : null;
 
+      // HTML saqlashdan OLDIN tozalanadi — bazadagi matn to'g'ridan-to'g'ri
+      // public saytda dangerouslySetInnerHTML orqali chiziladi.
+      const content = sanitizeContent(input.content ?? "");
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const data: any = {
         title: input.title,
         slug,
         excerpt: input.excerpt ?? null,
-        content: input.content ?? "",
+        content,
         featuredImage: input.featuredImage ?? null,
         metaTitle: input.metaTitle ?? null,
         metaDescription: input.metaDescription ?? null,
         status: input.status ?? "DRAFT",
         publishedAt,
+        readingMinutes: calcReadingMinutes(content),
       };
 
       // Faqat guide uchun
@@ -268,7 +306,10 @@ export function createContentService(model: ContentModel) {
       }
 
       if (input.excerpt !== undefined) data.excerpt = input.excerpt;
-      if (input.content !== undefined) data.content = input.content;
+      if (input.content !== undefined) {
+        data.content = sanitizeContent(input.content);
+        data.readingMinutes = calcReadingMinutes(data.content);
+      }
       if (input.featuredImage !== undefined) data.featuredImage = input.featuredImage;
       if (input.metaTitle !== undefined) data.metaTitle = input.metaTitle;
       if (input.metaDescription !== undefined) data.metaDescription = input.metaDescription;

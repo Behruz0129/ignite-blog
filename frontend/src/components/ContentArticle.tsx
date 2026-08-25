@@ -63,7 +63,7 @@ export default function ContentArticle({
             )}
             <span>{formatDate(item.publishedAt || item.createdAt)}</span>
             <span>·</span>
-            <span>{readingTime(item.content)} daqiqa</span>
+            <span>{readingTime(item)} daqiqa</span>
             <span>·</span>
             <LikeButton
               contentId={item.id}
@@ -95,7 +95,7 @@ export default function ContentArticle({
       <div className="container-content mt-12 max-w-3xl">
         <div
           className="article-body prose prose-neutral max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-ink prose-img:rounded-2xl"
-          dangerouslySetInnerHTML={{ __html: item.content }}
+          dangerouslySetInnerHTML={{ __html: item.content ?? "" }}
         />
 
         {/* Teglar */}

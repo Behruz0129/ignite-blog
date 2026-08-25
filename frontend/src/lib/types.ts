@@ -14,7 +14,11 @@ export interface ContentItem {
   title: string;
   slug: string;
   excerpt?: string | null;
-  content: string;
+  // Diqqat: `content` faqat BITTA yozuv so'ralganda keladi (getBySlug).
+  // Ro'yxat endpointlari uni qaytarmaydi — javob hajmini kichik saqlash uchun.
+  content?: string;
+  // O'qish vaqti serverda hisoblanadi, shuning uchun ro'yxatda ham mavjud.
+  readingMinutes?: number;
   featuredImage?: string | null;
   metaTitle?: string | null;
   metaDescription?: string | null;

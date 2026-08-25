@@ -65,7 +65,7 @@ export default function ArticleCard({ item, type, featured = false }: Props) {
         )}
 
         <div className="mt-4 flex items-center gap-2 text-[12px] text-ink-soft">
-          <span>{readingTime(item.content)} daqiqa o&apos;qish</span>
+          <span>{readingTime(item)} daqiqa o&apos;qish</span>
           <ArticleCardFooter
             contentId={item.id}
             type={type}

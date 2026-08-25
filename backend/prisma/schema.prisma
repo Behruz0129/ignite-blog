@@ -114,6 +114,9 @@ model News {
   metaDescription String?
   status          ContentStatus @default(DRAFT)
   publishedAt     DateTime?
+  // Ro'yxat endpointlari content'ni qaytarmaydi, shuning uchun o'qish
+  // vaqti yozish paytida hisoblanadi (utils/readingTime.ts)
+  readingMinutes  Int           @default(1)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -143,6 +146,9 @@ model Guide {
   difficulty      Difficulty    @default(BEGINNER)
   status          ContentStatus @default(DRAFT)
   publishedAt     DateTime?
+  // Ro'yxat endpointlari content'ni qaytarmaydi, shuning uchun o'qish
+  // vaqti yozish paytida hisoblanadi (utils/readingTime.ts)
+  readingMinutes  Int           @default(1)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -171,6 +177,9 @@ model Opinion {
   metaDescription String?
   status          ContentStatus @default(DRAFT)
   publishedAt     DateTime?
+  // Ro'yxat endpointlari content'ni qaytarmaydi, shuning uchun o'qish
+  // vaqti yozish paytida hisoblanadi (utils/readingTime.ts)
+  readingMinutes  Int           @default(1)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
