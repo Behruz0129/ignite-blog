@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import type { ContentConfig } from "@/lib/contentConfig";
 import { clearDraft, readDraft, saveDraft, savedAgo } from "@/lib/draft";
+import JsonImport, { type ImportResult } from "./JsonImport";
 import type { ContentItem, Taxonomy } from "@/lib/types";
 import Editor from "./Editor";
 import MediaPicker from "./MediaPicker";
@@ -69,6 +70,9 @@ export default function ContentForm({ config, id }: ContentFormProps) {
   const [error, setError] = useState("");
   const [picker, setPicker] = useState<null | "featured" | "editor">(null);
   const [seoOpen, setSeoOpen] = useState(false);
+  const [jsonOpen, setJsonOpen] = useState(false);
+  const [imagePrompt, setImagePrompt] = useState("");
+  const [importNote, setImportNote] = useState<string[]>([]);
   const [draftFound, setDraftFound] = useState<number | null>(null);
   const [autoSavedAt, setAutoSavedAt] = useState<number | null>(null);
   const titleRef = useRef<HTMLTextAreaElement>(null);
@@ -141,6 +145,28 @@ export default function ContentForm({ config, id }: ContentFormProps) {
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  /** JSON'dan kelgan maydonlarni formaga joylaydi. */
+  function applyImport({ data, categoryIds, tagIds, warnings }: ImportResult) {
+    setForm((prev) => ({
+      ...prev,
+      title: data.title?.trim() || prev.title,
+      excerpt: data.excerpt?.trim() || prev.excerpt,
+      content: data.content?.trim() || prev.content,
+      metaTitle: data.metaTitle?.trim() || prev.metaTitle,
+      metaDescription: data.metaDescription?.trim() || prev.metaDescription,
+      // Bo'sh ro'yxat kelsa mavjud tanlovni o'chirmaymiz.
+      categoryIds: categoryIds.length ? categoryIds : prev.categoryIds,
+      tagIds: tagIds.length ? tagIds : prev.tagIds,
+    }));
+
+    // Rasm uchun prompt formaga tegishli emas — uni alohida ko'rsatamiz,
+    // egasi rasm generatoriga o'zi ko'chirib qo'yadi.
+    setImagePrompt(data.imagePrompt?.trim() || "");
+    setImportNote(warnings);
+    setJsonOpen(false);
+    if (data.metaTitle || data.metaDescription) setSeoOpen(true);
   }
 
   function toggleArray(key: "categoryIds" | "tagIds", value: string) {
@@ -246,6 +272,15 @@ export default function ContentForm({ config, id }: ContentFormProps) {
 
         <div className="ml-auto flex items-center gap-2">
           <button
+            type="button"
+            onClick={() => setJsonOpen(true)}
+            className="btn-secondary btn-sm"
+            title="AI yozib bergan JSON'ni formaga o'tkazish"
+          >
+            <Icon name="code" className="h-4 w-4" />
+            JSON
+          </button>
+          <button
             onClick={() => submit("DRAFT")}
             disabled={loading || !canSave}
             className="btn-secondary btn-sm"
@@ -273,6 +308,67 @@ export default function ContentForm({ config, id }: ContentFormProps) {
         <div className="mb-4 flex items-start gap-2 rounded-lg border border-danger/20 bg-danger-soft px-4 py-3 text-sm text-danger">
           <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0" />
           <span>{error}</span>
+        </div>
+      )}
+
+      {jsonOpen && (
+        <JsonImport
+          categories={categories}
+          tags={tags}
+          formHasContent={Boolean(form.title.trim() || form.content.trim())}
+          onApply={applyImport}
+          onClose={() => setJsonOpen(false)}
+        />
+      )}
+
+      {/* JSON'dan to'ldirilgandan keyingi ogohlantirishlar */}
+      {importNote.length > 0 && (
+        <div className="mb-4 rounded-lg border border-line-strong bg-canvas px-4 py-3 text-sm">
+          <div className="flex items-start gap-2">
+            <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0 text-ink-soft" />
+            <div className="min-w-0 flex-1">
+              <div className="font-medium text-ink">To&apos;ldirildi, lekin diqqat:</div>
+              <ul className="mt-1 space-y-0.5 text-ink-soft">
+                {importNote.map((w) => (
+                  <li key={w}>— {w}</li>
+                ))}
+              </ul>
+            </div>
+            <button
+              type="button"
+              onClick={() => setImportNote([])}
+              aria-label="Yopish"
+              className="rounded p-1 text-ink-faint hover:text-ink"
+            >
+              <Icon name="close" className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Rasm uchun AI prompti — formaga tegishli emas, ko'chirib olish uchun */}
+      {imagePrompt && (
+        <div className="mb-4 rounded-lg border border-line bg-paper px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Icon name="image" className="h-4 w-4 text-ink-soft" />
+            <span className="text-sm font-medium text-ink">Bosh rasm uchun prompt</span>
+            <button
+              type="button"
+              onClick={() => navigator.clipboard?.writeText(imagePrompt)}
+              className="btn-secondary btn-sm ml-auto"
+            >
+              Nusxa olish
+            </button>
+            <button
+              type="button"
+              onClick={() => setImagePrompt("")}
+              aria-label="Yopish"
+              className="rounded p-1 text-ink-faint hover:text-ink"
+            >
+              <Icon name="close" className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <p className="mt-2 text-[13px] leading-5 text-ink-soft">{imagePrompt}</p>
         </div>
       )}
 
