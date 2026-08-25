@@ -46,14 +46,19 @@ export function errorHandler(
       message = "Ma'lumotlar bazasi so'rovi xatosi.";
     }
   }
-  // 3) Oddiy Error
-  else if (err instanceof Error) {
+  // 3) Oddiy Error — bu kutilmagan holat (kod bug'i, tashqi xizmat uzilishi...).
+  //    Uning matni ichki tafsilotlarni oshkor qilishi mumkin (masalan
+  //    ulanish satri, jadval nomi), shuning uchun mijozga faqat development'da
+  //    ko'rsatamiz. Production'da yuqoridagi generic xabar qoladi.
+  else if (err instanceof Error && env.NODE_ENV === "development") {
     message = err.message;
   }
 
-  // 500 xatolarni to'liq logga yozamiz (kod bug'i bo'lishi mumkin)
+  // 500 xatolarni to'liq logga yozamiz (kod bug'i bo'lishi mumkin).
+  // Log DOIM asl xabarni oladi — mijozga nima ketganidan qat'i nazar.
   if (statusCode >= 500) {
-    logger.error(`${statusCode} - ${message}`);
+    const original = err instanceof Error ? err.message : String(err);
+    logger.error(`${statusCode} - ${original}`);
     if (err instanceof Error) logger.error(err.stack || "");
   }
 

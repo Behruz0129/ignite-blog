@@ -15,21 +15,12 @@
 import { PrismaClient, Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
+// Nusxa emas, aynan API ishlatadigan slugify — ikkalasi ajralib ketmasligi uchun
+import { slugify } from "../src/utils/slugify";
 
 dotenv.config();
 
 const prisma = new PrismaClient();
-
-// Oddiy slug yaratuvchi (utils/slugify bilan bir xil mantiq)
-function slugify(text: string): string {
-  return text
-    .toString()
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
-}
 
 async function main() {
   console.log("🌱  Seeding boshlandi...");

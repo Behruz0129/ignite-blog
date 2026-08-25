@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
 import { authPost } from "@/lib/auth-client";
 import type { ContentType } from "@/lib/types";
@@ -27,13 +27,20 @@ export default function LikeButton({
   initialLiked = false,
   compact = false,
 }: Props) {
+  const router = useRouter();
   const { user } = useAuth();
   const [liked, setLiked] = useState(initialLiked);
   const [count, setCount] = useState(initialCount);
   const [loading, setLoading] = useState(false);
 
   async function toggle() {
-    if (!user) return;
+    // Mehmon bo'lsa login sahifasiga yuboramiz. Diqqat: bu yerda <Link>
+    // ishlatib bo'lmaydi — LikeButton ArticleCard'ning <Link> kartasi ICHIDA
+    // turadi, ya'ni <a> ichida <a> hosil bo'lib hydration xatosi beradi.
+    if (!user) {
+      router.push("/login");
+      return;
+    }
     if (loading) return;
     setLoading(true);
     try {
@@ -50,20 +57,6 @@ export default function LikeButton({
     }
   }
 
-  if (!user) {
-    return (
-      <Link
-        href="/login"
-        className={`inline-flex items-center gap-1.5 text-ink-soft transition hover:text-ink ${
-          compact ? "text-[12px]" : "text-sm"
-        }`}
-      >
-        <span>{liked ? "♥" : "♡"}</span>
-        <span>{count}</span>
-      </Link>
-    );
-  }
-
   return (
     <button
       type="button"
@@ -72,7 +65,13 @@ export default function LikeButton({
       className={`inline-flex items-center gap-1.5 transition disabled:opacity-50 ${
         liked ? "text-red-500" : "text-ink-soft hover:text-ink"
       } ${compact ? "text-[12px]" : "text-sm"}`}
-      aria-label={liked ? "Like olib tashlash" : "Like bosish"}
+      aria-label={
+        !user
+          ? "Like bosish uchun kiring"
+          : liked
+            ? "Like olib tashlash"
+            : "Like bosish"
+      }
     >
       <span>{liked ? "♥" : "♡"}</span>
       <span>{count}</span>
