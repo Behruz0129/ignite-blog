@@ -108,6 +108,9 @@ Bular hali hal qilinmagan — navbatdagi sessiya shu ro'yxatdan davom etsin.
      domenga tegishli ekani tekshirilsin.
    - Telegram Login Widget "Bot domain invalid" beradi — BotFather'da
      `/setdomain` → `ignite.uz` qilinmagan.
+   - `TELEGRAM_CHANNEL_ID` hali qo'yilmagan — u bo'lmasa avtoposting o'chiq
+     turadi (kod tayyor). Kanal `@nomi` yoki `-100...` ko'rinishida; bot
+     kanalga **admin** sifatida qo'shilishi shart.
 
    `CORS_ORIGIN` ~~to'ldirildi~~ ✓ (uchala domen 204 + ACAO oladi).
 
@@ -204,10 +207,17 @@ Hali qilinmagan (jiddiylik pastroq): kirgan holda parolni o'zgartirish,
 akkauntni o'chirish, "barcha qurilmalardan chiqish", login'dagi timing farqi,
 bekor qilingan tokenlarni bazadan tozalash.
 
-**Rejadagi yangi imkoniyatlar** (egasi tanlagan): sayt ichida haqiqiy
-mini o'yinlar (WebGL / 2D-3D, quiz emas) va yangi maqola chop etilganda
-Telegram kanalga avtoposting (`telegram.service.ts` asosi bor).
+**Rejadagi yangi imkoniyat:** sayt ichida haqiqiy mini o'yinlar
+(WebGL / 2D-3D, quiz emas). Qanday joylashishi hali muhokama qilinmagan:
+alohida `/games` bo'limimi, natijalar saqlanadimi, qaysi texnologiya.
 
 **Ochiq arxitektura qarori:** News/Guides/Opinions ni bitta `Post` + `type`
 ga birlashtirish — hozir uch model uchun deyarli bir xil kod uch marta
 yozilgan. Kontent oz ekan, migratsiya arzon.
+
+**2026-08-26 — Telegram avtoposting.**
+Maqola chop etilganda kanalga e'lon ketadi (`telegramPost.service.ts`).
+Ikki qoida: yuborish xatosi chop etishni buzmaydi (log'ga yoziladi, `void`
+bilan chaqiriladi) va bir maqola bir marta yuboriladi (`telegramPostedAt`).
+Ulanish nuqtalari — `content.service.ts` dagi `create`, `update`, `setStatus`.
+Yoqish uchun `TELEGRAM_CHANNEL_ID` kerak; bo'lmasa jimgina o'chiq turadi.
