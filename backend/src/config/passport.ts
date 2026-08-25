@@ -13,7 +13,7 @@ import {
   Profile as GoogleProfile,
 } from "passport-google-oauth20";
 // passport-discord'da rasmiy tiplar yo'q - o'z e'lonimizni ishlatamiz
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+ 
 import { Strategy as DiscordStrategy } from "passport-discord";
 
 import {

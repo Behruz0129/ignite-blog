@@ -19,7 +19,8 @@ export function errorHandler(
   err: unknown,
   _req: Request,
   res: Response,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // Express xato ushlovchini 4 argumentli imzosidan taniydi —
+  // _next ishlatilmasa ham olib tashlab bo'lmaydi
   _next: NextFunction
 ) {
   let statusCode = 500;

@@ -12,7 +12,7 @@ declare module "passport-discord" {
     scope?: string[] | string;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   export type VerifyCallback = (
     accessToken: string,
     refreshToken: string,

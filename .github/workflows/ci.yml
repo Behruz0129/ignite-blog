@@ -1,0 +1,61 @@
+# CI — har bir push va pull request'da uchala paketni tekshiradi.
+# Maqsad: buzilgan kod main'ga tushmasin va deploy paytida "Render'da
+# build yiqildi" degan holat bo'lmasin.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend (lint, typecheck, test, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      # Prisma Client generatsiyasi uchun sxema yetarli — baza kerak emas
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  web:
+    name: ${{ matrix.app }} (lint, typecheck, build)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [admin, frontend]
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      # Build paytida API'ga murojaat qilinmaydi (sahifalar ISR bilan
+      # ishlaydi va xato bo'lsa bo'sh ro'yxat qaytaradi), lekin
+      # NEXT_PUBLIC_API_URL bo'lmasa ogohlantirish chiqadi.
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:5000/api
+          NEXT_PUBLIC_SITE_URL: http://localhost:3001

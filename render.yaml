@@ -3,6 +3,9 @@
 #  Render.com "Blueprint" orqali shu faylni o'qib, servisni
 #  avtomatik sozlaydi. Maxfiy qiymatlarni (sync: false) Render
 #  panelida qo'lda kiritasiz.
+#
+#  Public sayt (frontend/) va admin panel (admin/) alohida —
+#  odatda Vercel'ga deploy qilinadi.
 # ==========================================================
 
 services:
@@ -25,14 +28,55 @@ services:
       - key: NPM_CONFIG_INCLUDE
         value: dev
       # PORT'ni Render avtomatik beradi - tegmaymiz
+
+      # --- Baza ---
       - key: DATABASE_URL
         sync: false # Neon connection string (qo'lda kiritiladi)
+
+      # --- Auth ---
       - key: JWT_SECRET
         generateValue: true # Render tasodifiy qiymat yaratadi
       - key: JWT_EXPIRES_IN
         value: 7d
+      - key: REFRESH_TOKEN_DAYS
+        value: "30"
+
+      # --- Manzillar ---
+      # CORS_ORIGIN: admin va public sayt manzillari, vergul bilan
       - key: CORS_ORIGIN
-        sync: false # Vercel admin manzili (deploydan keyin kiritiladi)
+        sync: false
+      # Bu servisning o'z manzili (OAuth callback shu asosda quriladi)
+      - key: OAUTH_CALLBACK_BASE
+        sync: false
+      # Public sayt manzili (OAuth redirect va email havolalari uchun)
+      - key: FRONTEND_URL
+        sync: false
+
+      # --- OAuth (ixtiyoriy: bo'sh bo'lsa provayder o'chiq) ---
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: DISCORD_CLIENT_ID
+        sync: false
+      - key: DISCORD_CLIENT_SECRET
+        sync: false
+
+      # --- Telegram Login (ixtiyoriy) ---
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_BOT_USERNAME
+        sync: false
+
+      # --- Email ---
+      # DIQQAT: production'da RESEND_API_KEY bo'lmasa ro'yxatdan o'tish va
+      # parol tiklash ishlamaydi (aniq xato qaytariladi).
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+
+      # --- Media ---
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY
@@ -41,9 +85,24 @@ services:
         sync: false
       - key: CLOUDINARY_FOLDER
         value: ignite-blog
+
+      # --- Birinchi admin (seed) ---
       - key: ADMIN_NAME
         value: Super Admin
       - key: ADMIN_EMAIL
         sync: false
       - key: ADMIN_PASSWORD
+        sync: false
+
+      # --- Rate limiting ---
+      - key: RATE_LIMIT_WINDOW_MINUTES
+        value: "15"
+      - key: RATE_LIMIT_MAX
+        value: "300"
+      - key: RATE_LIMIT_READ_MAX
+        value: "2000"
+      # Frontend (Vercel) dagi INTERNAL_API_TOKEN bilan AYNAN bir xil qiymat.
+      # SSR so'rovlarini rate limitdan chiqaradi — busiz butun public sayt
+      # bitta IP sifatida limitga uriladi.
+      - key: INTERNAL_API_TOKEN
         sync: false
