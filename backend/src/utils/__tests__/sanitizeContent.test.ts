@@ -74,3 +74,24 @@ describe("sanitizeContent — muharrir chiqaradigan narsani saqlaydi", () => {
     expect(out).toContain('rel="noopener noreferrer nofollow"');
   });
 });
+
+describe("YouTube video", () => {
+  it("YouTube embed saqlanadi — muharrirdagi video bloki yo'qolmasin", () => {
+    const html =
+      '<div data-youtube-video><iframe src="https://www.youtube-nocookie.com/embed/abc123" width="840" height="472"></iframe></div>';
+    const out = sanitizeContent(html);
+    expect(out).toContain("iframe");
+    expect(out).toContain("youtube-nocookie.com/embed/abc123");
+  });
+
+  it("youtube.com ham qabul qilinadi", () => {
+    const out = sanitizeContent('<iframe src="https://www.youtube.com/embed/xyz"></iframe>');
+    expect(out).toContain("youtube.com/embed/xyz");
+  });
+
+  it("begona saytdagi iframe butunlay olib tashlanadi", () => {
+    const out = sanitizeContent('<iframe src="https://evil.example.com/x"></iframe>');
+    expect(out).not.toContain("evil.example.com");
+    expect(out).not.toContain("iframe");
+  });
+});

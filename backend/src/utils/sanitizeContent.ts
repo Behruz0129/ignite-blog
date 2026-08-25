@@ -28,6 +28,8 @@ const OPTIONS: sanitizeHtml.IOptions = {
     "strong", "b", "em", "i", "u", "s", "strike", "sup", "sub", "mark",
     // Havola va media
     "a", "img", "figure", "figcaption",
+    // Video: faqat YouTube — pastdagi allowedIframeHostnames cheklovi bilan
+    "iframe",
     // Jadval (Tiptap table kengaytmasi)
     "table", "thead", "tbody", "tfoot", "tr", "th", "td", "colgroup", "col",
   ],
@@ -38,10 +40,20 @@ const OPTIONS: sanitizeHtml.IOptions = {
     code: ["class"],
     pre: ["class"],
     span: ["class"],
-    div: ["class"],
     th: ["colspan", "rowspan", "colwidth", "style"],
     td: ["colspan", "rowspan", "colwidth", "style"],
     col: ["style"],
+    iframe: [
+      "src",
+      "width",
+      "height",
+      "allow",
+      "allowfullscreen",
+      "frameborder",
+      "title",
+    ],
+    // Tiptap video blokini shu atribut bilan belgilaydi
+    div: ["class", "data-youtube-video"],
   },
   // javascript: va data: sxemalarini bloklaymiz (data: rasm ham bo'lishi
   // mumkin, lekin u bazani shishiradi — rasmlar Cloudinary'da turishi kerak)
@@ -68,7 +80,25 @@ const OPTIONS: sanitizeHtml.IOptions = {
   },
   // <script>/<style> ichidagi matn ham butunlay tashlansin
   // (standart holatda teg olib tashlanadi, matni qoladi)
-  nonTextTags: ["script", "style", "textarea", "option", "noscript", "iframe"],
+  nonTextTags: ["script", "style", "textarea", "option", "noscript"],
+
+  /**
+   * `iframe` faqat YouTube uchun ochiq. Ro'yxatdan tashqari host kelsa
+   * sanitize-html iframe'ni butunlay olib tashlaydi, ya'ni tahrirchi
+   * ixtiyoriy sayt embed qila olmaydi.
+   */
+  allowedIframeHostnames: [
+    "www.youtube.com",
+    "youtube.com",
+    "www.youtube-nocookie.com",
+    "youtube-nocookie.com",
+  ],
+
+  /**
+   * Ruxsat etilmagan hostdagi iframe'dan `src` olib tashlanadi va bo'm-bo'sh
+   * `<iframe></iframe>` qolib ketardi — uni butunlay tashlaymiz.
+   */
+  exclusiveFilter: (frame) => frame.tag === "iframe" && !frame.attribs.src,
 };
 
 export function sanitizeContent(html: string): string {
