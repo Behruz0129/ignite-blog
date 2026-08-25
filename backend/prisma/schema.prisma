@@ -135,6 +135,10 @@ model News {
   metaDescription String?
   status          ContentStatus @default(DRAFT)
   publishedAt     DateTime?
+  /// Telegram kanalga yuborilgan vaqt. Bir maqola ikki marta yuborilmasligi
+  /// uchun: chop etilgandan keyin tahrirlansa yoki qayta chop etilsa ham
+  /// obunachilar bir xil xabarni ikkinchi bor olmaydi.
+  telegramPostedAt DateTime?
   // Ro'yxat endpointlari content'ni qaytarmaydi, shuning uchun o'qish
   // vaqti yozish paytida hisoblanadi (utils/readingTime.ts)
   readingMinutes  Int           @default(1)
@@ -167,6 +171,10 @@ model Guide {
   difficulty      Difficulty    @default(BEGINNER)
   status          ContentStatus @default(DRAFT)
   publishedAt     DateTime?
+  /// Telegram kanalga yuborilgan vaqt. Bir maqola ikki marta yuborilmasligi
+  /// uchun: chop etilgandan keyin tahrirlansa yoki qayta chop etilsa ham
+  /// obunachilar bir xil xabarni ikkinchi bor olmaydi.
+  telegramPostedAt DateTime?
   // Ro'yxat endpointlari content'ni qaytarmaydi, shuning uchun o'qish
   // vaqti yozish paytida hisoblanadi (utils/readingTime.ts)
   readingMinutes  Int           @default(1)
@@ -198,6 +206,10 @@ model Opinion {
   metaDescription String?
   status          ContentStatus @default(DRAFT)
   publishedAt     DateTime?
+  /// Telegram kanalga yuborilgan vaqt. Bir maqola ikki marta yuborilmasligi
+  /// uchun: chop etilgandan keyin tahrirlansa yoki qayta chop etilsa ham
+  /// obunachilar bir xil xabarni ikkinchi bor olmaydi.
+  telegramPostedAt DateTime?
   // Ro'yxat endpointlari content'ni qaytarmaydi, shuning uchun o'qish
   // vaqti yozish paytida hisoblanadi (utils/readingTime.ts)
   readingMinutes  Int           @default(1)

@@ -37,6 +37,9 @@ const envSchema = z.object({
 
   // --- Telegram Login ---
   TELEGRAM_BOT_TOKEN: z.string().optional(),
+  // Yangi maqolalar avtomatik yuboriladigan kanal (masalan "@ignite_uz" yoki
+  // raqamli id). Bo'sh bo'lsa avtoposting o'chiq bo'ladi.
+  TELEGRAM_CHANNEL_ID: z.string().optional(),
   TELEGRAM_BOT_USERNAME: z.string().optional(), // @sizsiz bot username (BotFather)
 
   // --- Email (Resend) ---
@@ -126,6 +129,11 @@ export const isGoogleConfigured = Boolean(
 export const isDiscordConfigured = Boolean(
   env.DISCORD_CLIENT_ID && env.DISCORD_CLIENT_SECRET
 );
+/** Avtoposting uchun bot tokeni ham, kanal ham kerak. */
+export const isTelegramChannelConfigured = Boolean(
+  env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHANNEL_ID
+);
+
 export const isTelegramConfigured = Boolean(
   env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_BOT_USERNAME
 );

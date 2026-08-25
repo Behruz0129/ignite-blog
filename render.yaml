@@ -67,6 +67,10 @@ services:
         sync: false
       - key: TELEGRAM_BOT_USERNAME
         sync: false
+      # Avtoposting kanali (@kanal yoki -100...). Bo'sh bo'lsa avtoposting o'chiq.
+      # Bot kanalga admin sifatida qo'shilgan bo'lishi shart.
+      - key: TELEGRAM_CHANNEL_ID
+        sync: false
 
       # --- Email ---
       # DIQQAT: production'da RESEND_API_KEY bo'lmasa ro'yxatdan o'tish va

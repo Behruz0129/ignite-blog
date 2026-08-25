@@ -13,6 +13,7 @@
 
 import { prisma } from "../config/prisma";
 import { AppError } from "../utils/AppError";
+import { telegramPostService, type ContentKind } from "./telegramPost.service";
 import { slugify, generateUniqueSlug } from "../utils/slugify";
 import { calcReadingMinutes } from "../utils/readingTime";
 import { sanitizeContent } from "../utils/sanitizeContent";
@@ -304,7 +305,15 @@ export function createContentService(model: ContentModel) {
         data.tags = { connect: input.tagIds.map((id) => ({ id })) };
       }
 
-      return delegate.create({ data, include: includeRelations });
+      const record = await delegate.create({ data, include: includeRelations });
+
+      // Darhol chop etilgan bo'lsa — kanalga e'lon. Javob kutilmaydi:
+      // Telegram sekin bo'lsa ham adminka darrov javob qaytarsin.
+      if (record.status === "PUBLISHED") {
+        void telegramPostService.publish(model as ContentKind, record);
+      }
+
+      return record;
     },
 
     /**
@@ -359,7 +368,20 @@ export function createContentService(model: ContentModel) {
         data.tags = { set: input.tagIds.map((id) => ({ id })) };
       }
 
-      return delegate.update({ where: { id }, data, include: includeRelations });
+      const updated = await delegate.update({
+        where: { id },
+        data,
+        include: includeRelations,
+      });
+
+      // Qoralamadan chop etilganga o'tgan bo'lsa — kanalga e'lon.
+      // `telegramPostedAt` tekshiruvi servis ichida, shuning uchun tahrirlash
+      // takroriy xabar yubormaydi.
+      if (updated.status === "PUBLISHED") {
+        void telegramPostService.publish(model as ContentKind, updated);
+      }
+
+      return updated;
     },
 
     /**
@@ -386,7 +408,17 @@ export function createContentService(model: ContentModel) {
       }
       if (status === "DRAFT") data.publishedAt = null;
 
-      return delegate.update({ where: { id }, data, include: includeRelations });
+      const updated = await delegate.update({
+        where: { id },
+        data,
+        include: includeRelations,
+      });
+
+      if (status === "PUBLISHED") {
+        void telegramPostService.publish(model as ContentKind, updated);
+      }
+
+      return updated;
     },
   };
 }
