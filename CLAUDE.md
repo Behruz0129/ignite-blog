@@ -65,6 +65,13 @@ access+refresh rotatsiya bilan. Admin client tokenni avtomatik yangilaydi
 **Til:** butun UI va izohlar o'zbekcha, **faqat lotin alifbosida** — kirill
 harflari aralashmasin.
 
+**`CORS_ORIGIN` prodda to'ldirilgan bo'lishi shart.** Uning default qiymati
+`http://localhost:3000` — o'rnatilmasa, brauzerdan keladigan hamma so'rov
+(kirish, ro'yxatdan o'tish, like, izoh) rad etiladi, lekin SSR bilan
+chiziladigan sahifalar ko'rinaveradi, ya'ni sayt "ishlayotgandek" tuyuladi.
+Server ishga tushganda ruxsat ro'yxatini loglaydi va faqat localhost qolsa
+xato yozadi — Render logining boshiga qarash yetadi.
+
 **`INTERNAL_API_TOKEN`** frontend (Vercel) va backend (Render) da **aynan bir
 xil** bo'lishi shart. U SSR so'rovlarini rate limitdan chiqaradi; mos
 kelmasa butun ommaviy sayt bitta IP sifatida limitga uriladi.
@@ -91,14 +98,22 @@ kelmasa butun ommaviy sayt bitta IP sifatida limitga uriladi.
 
 Bular hali hal qilinmagan — navbatdagi sessiya shu ro'yxatdan davom etsin.
 
-1. ~~Pochta~~ — **kerak emas** (2026-08-25 qarori). `MX`, `SPF`, `ftp` va
+1. **SHOSHILINCH — Render'da `CORS_ORIGIN` to'ldirilmagan.** Shu sababli
+   `admin.ignite.uz` ga kirib bo'lmaydi va ommaviy saytda like/izoh/
+   ro'yxatdan o'tish ishlamaydi. Render → ignite-api → Environment →
+   `CORS_ORIGIN` =
+   `https://ignite.uz,https://www.ignite.uz,https://admin.ignite.uz`
+   (probelsiz, vergul bilan), so'ng servisni qayta ishga tushirish.
+   `FRONTEND_URL` ham to'ldirilgani tekshirilsin.
+
+2. ~~Pochta~~ — **kerak emas** (2026-08-25 qarori). `MX`, `SPF`, `ftp` va
    `mail` yozuvlari eski hostingdan qolgan va ishlamaydi; ular shunchaki
    ortiqcha, zarari yo'q. Kelajakda domen pochtasi kerak bo'lsa, o'shanda
    noldan sozlanadi.
-2. **Apex va admin turlicha sozlangan**: `ignite.uz` DNS only, `admin`
+3. **Apex va admin turlicha sozlangan**: `ignite.uz` DNS only, `admin`
    proxied. Ikkalasi ham ishlaydi; bir xil qilish shart emas, lekin bilib
    qo'yish kerak (Cloudflare "origin IP ochiq" deb ogohlantiradi).
-3. **`api.ignite.uz` subdomeni yo'q** — backend hali Render'ning uzun
+4. **`api.ignite.uz` subdomeni yo'q** — backend hali Render'ning uzun
    manzilida. Qilish tartibi (tartib muhim, aks holda Render domenni
    tasdiqlay olmaydi):
    1. Render → servis → Settings → Custom Domain → `api.ignite.uz`;
@@ -110,9 +125,9 @@ Bular hali hal qilinmagan — navbatdagi sessiya shu ro'yxatdan davom etsin.
       so'ng qayta deploy.
 
    To'siq: Render dashboard'iga brauzerda kirilmagan.
-4. **Render free plan** — uyquga ketadi. Ommaviy sayt ISR bilan qutuladi,
+5. **Render free plan** — uyquga ketadi. Ommaviy sayt ISR bilan qutuladi,
    lekin adminkaga birinchi kirish sekin.
-5. **Kontentni egasi o'zi yozadi** — maqolalarni men kiritmayman.
+6. **Kontentni egasi o'zi yozadi** — maqolalarni men kiritmayman.
 
 ---
 
@@ -158,3 +173,11 @@ Muharrir qismlari: `admin/src/components/Editor.tsx` (asosiy),
 `admin/src/components/editor/slash-command.ts` (`/` menyusi mantiqi),
 `admin/src/components/editor/SlashList.tsx` (menyu ko'rinishi).
 Yangi blok qo'shish kerak bo'lsa — `slash-command.ts` dagi `buildItems`.
+
+**2026-08-25 — CORS sozlamasi tuzog'i.**
+`admin.ignite.uz` dan kirishda CORS xatosi chiqdi. Tekshiruvda uchala prod
+domeni ham rad etilayotgani ma'lum bo'ldi: Render'da `CORS_ORIGIN`
+o'rnatilmagan, default `http://localhost:3000` qolib ketgan. Kod tomonda uch
+narsa tuzatildi (rad etish endi 500 emas, `FRONTEND_URL` avtomatik qo'shiladi,
+startup'da ro'yxat va ogohlantirish loglanadi), lekin **asosiy yechim —
+Render env'ini to'ldirish**, u §4 ning 1-bandida turibdi.
