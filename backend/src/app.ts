@@ -41,7 +41,14 @@ export function createApp(): Application {
         if (!origin || corsOrigins.includes(origin)) {
           return callback(null, true);
         }
-        return callback(new Error("CORS tomonidan bloklandi: " + origin));
+
+        // DIQQAT: bu yerda `callback(new Error(...))` qilinmaydi. Xato
+        // qaytarilsa Express uni ichki nosozlik deb hisoblab **500** beradi
+        // va brauzerda "Internal Server Error" ko'rinadi — aslida bu shunchaki
+        // ruxsat yo'qligi. `false` esa javobga CORS sarlavhasini qo'ymaydi,
+        // brauzer o'zi to'g'ri CORS xabarini chiqaradi.
+        logger.warn(`CORS: ruxsat etilmagan origin rad etildi — ${origin}`);
+        return callback(null, false);
       },
       credentials: true,
     })

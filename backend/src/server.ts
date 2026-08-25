@@ -10,7 +10,7 @@
  */
 
 import { createApp } from "./app";
-import { env } from "./config/env";
+import { env, corsOrigins, corsLooksMisconfigured } from "./config/env";
 import { logger } from "./config/logger";
 import { prisma } from "./config/prisma";
 
@@ -31,6 +31,19 @@ async function bootstrap() {
     logger.info(`🚀  Server ishga tushdi: http://localhost:${env.PORT}`);
     logger.info(`📚  API hujjat: http://localhost:${env.PORT}/api/docs`);
     logger.info(`🌱  Muhit: ${env.NODE_ENV}`);
+    logger.info(`🔓  CORS ruxsati: ${corsOrigins.join(", ")}`);
+
+    // Prodda CORS ro'yxatida faqat localhost qolsa, brauzerdan keladigan
+    // hamma so'rov (kirish, like, izoh) jimgina bloklanadi va sabab
+    // loglardan darrov ko'rinmaydi. Shuning uchun baland ovozda ogohlantiramiz.
+    if (corsLooksMisconfigured) {
+      logger.error(
+        "CORS_ORIGIN sozlanmagan: ro'yxatda faqat localhost bor. " +
+          "Brauzerdan keladigan so'rovlar rad etiladi. " +
+          "Render/hosting muhitida CORS_ORIGIN ni sayt manzillari bilan to'ldiring " +
+          "(masalan: https://ignite.uz,https://admin.ignite.uz)."
+      );
+    }
   });
 
   // Graceful shutdown: signal kelganda ulanishlarni toza yopamiz

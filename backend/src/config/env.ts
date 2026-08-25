@@ -80,8 +80,27 @@ export const isCloudinaryConfigured = Boolean(
     env.CLOUDINARY_API_SECRET
 );
 
-// CORS origin ro'yxatini massivga aylantiramiz
-export const corsOrigins = env.CORS_ORIGIN.split(",").map((o) => o.trim());
+/**
+ * Ruxsat etilgan originlar.
+ *
+ * `FRONTEND_URL` ham qo'shiladi: u ommaviy saytning manzilini allaqachon
+ * biladi, shuning uchun `CORS_ORIGIN` chala to'ldirilsa ham sayt ishlab
+ * turaveradi. Bir marta `CORS_ORIGIN` prodda umuman o'rnatilmay qolgan va
+ * default `http://localhost:3000` sifatida qolib ketgan edi — natijada
+ * saytdagi kirish, like va izohlar jimgina bloklangan.
+ */
+export const corsOrigins = Array.from(
+  new Set(
+    [...env.CORS_ORIGIN.split(","), env.FRONTEND_URL]
+      .map((o) => o?.trim().replace(/\/$/, ""))
+      .filter((o): o is string => Boolean(o))
+  )
+);
+
+/** Prodda localhost'dan boshqa origin yo'q bo'lsa — sozlama unutilgan. */
+export const corsLooksMisconfigured =
+  env.NODE_ENV === "production" &&
+  corsOrigins.every((o) => o.includes("localhost") || o.includes("127.0.0.1"));
 
 // OAuth provayderlar sozlanganligini bilish uchun yordamchilar
 export const isGoogleConfigured = Boolean(
