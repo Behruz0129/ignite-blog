@@ -4,11 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
 import { authPost } from "@/lib/auth-client";
-import type { ContentType } from "@/lib/types";
 
 interface Props {
   contentId: string;
-  type: ContentType;
   initialCount?: number;
   initialLiked?: boolean;
   compact?: boolean;
@@ -16,7 +14,6 @@ interface Props {
 
 export default function LikeButton({
   contentId,
-  type,
   initialCount = 0,
   initialLiked = false,
   compact = false,

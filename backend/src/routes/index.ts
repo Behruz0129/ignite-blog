@@ -18,6 +18,7 @@ import commentsRoutes from "./comment.routes";
 import userRoutes from "./user.routes";
 import likeRoutes from "./like.routes";
 import mediaRoutes from "./media.routes";
+import resourcesRoutes from "./resources.routes";
 
 const router = Router();
 
@@ -39,5 +40,6 @@ router.use("/comments", commentsRoutes);
 router.use("/users", userRoutes);
 router.use("/likes", likeRoutes);
 router.use("/media", mediaRoutes);
+router.use("/resources", resourcesRoutes);
 
 export default router;

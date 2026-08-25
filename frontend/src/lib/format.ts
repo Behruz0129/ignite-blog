@@ -79,3 +79,10 @@ export const DIFFICULTY_LABEL: Record<string, string> = {
   INTERMEDIATE: "O'rta",
   ADVANCED: "Murakkab",
 };
+
+/** Bazadagi tur (`NEWS`) → saytdagi yo'l bo'lagi (`news`). */
+export function postTypeToUrl(type?: string): "news" | "guides" | "opinions" {
+  if (type === "GUIDE") return "guides";
+  if (type === "OPINION") return "opinions";
+  return "news";
+}

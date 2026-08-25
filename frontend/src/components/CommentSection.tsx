@@ -5,12 +5,11 @@ import Link from "next/link";
 import { PUBLIC_API_URL } from "@/lib/api";
 import { getStoredToken } from "@/lib/auth-client";
 import { useAuth } from "@/components/AuthProvider";
-import type { ContentType, PublicComment } from "@/lib/types";
+import type { PublicComment } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 
 interface Props {
   contentId: string;
-  type: ContentType;
   initialComments: PublicComment[];
   // Tasdiqlangan izohlarning umumiy soni. `initialComments` serverda
   // cheklangan (eng so'nggi 50 ta), shuning uchun sarlavhadagi son shu
@@ -28,7 +27,6 @@ function avatarLetter(c: PublicComment): string {
 
 export default function CommentSection({
   contentId,
-  type,
   initialComments,
   totalCount,
 }: Props) {

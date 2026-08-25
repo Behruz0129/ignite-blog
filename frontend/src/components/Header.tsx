@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useAuth } from "./AuthProvider";
 
 const NAV = [
-  { href: "/news", label: "Yangiliklar" },
-  { href: "/guides", label: "Qo'llanmalar" },
-  { href: "/opinions", label: "Maqolalar" },
+  // Uch bo'lim o'rniga bitta oqim: tur endi filtr sifatida `/posts` ichida.
+  // Eski manzillar (`/news`, `/guides`, `/opinions`) ishlab turaveradi —
+  // ular ulashilgan havolalarda va qidiruv natijalarida qolgan.
+  { href: "/posts", label: "Materiallar" },
+  { href: "/resources", label: "Resurslar" },
 ];
 
 export default function Header() {

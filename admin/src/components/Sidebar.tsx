@@ -32,6 +32,7 @@ const NAV: NavGroup[] = [
       { href: "/news", label: "Yangiliklar", icon: "news" },
       { href: "/guides", label: "Qo'llanmalar", icon: "guide" },
       { href: "/opinions", label: "Maqolalar", icon: "opinion" },
+      { href: "/resources", label: "Resurslar", icon: "external" },
       { href: "/media", label: "Media", icon: "image" },
     ],
   },

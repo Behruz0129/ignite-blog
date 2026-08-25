@@ -9,8 +9,13 @@ export interface Taxonomy {
   slug: string;
 }
 
+/** Bazadagi tur nomi (`posts.type`). URL bo'lagi bilan aralashmasin. */
+export type PostType = "NEWS" | "GUIDE" | "OPINION";
+
 export interface ContentItem {
   id: string;
+  /** Aralash ro'yxatda har element o'z turini bilishi kerak — havola shundan yasaladi. */
+  type?: PostType;
   title: string;
   slug: string;
   excerpt?: string | null;
@@ -63,3 +68,20 @@ export interface ApiResponse<T> {
 
 // Kontent turi (yo'llar va sarlavhalar uchun)
 export type ContentType = "news" | "guides" | "opinions";
+
+/** Foydali havolalar bo'limi elementi. */
+export interface Resource {
+  id: string;
+  title: string;
+  description?: string | null;
+  url: string;
+  image?: string | null;
+  group?: string | null;
+  order: number;
+  createdAt: string;
+}
+
+export interface ResourceGroups {
+  total: number;
+  groups: { name: string; items: Resource[] }[];
+}

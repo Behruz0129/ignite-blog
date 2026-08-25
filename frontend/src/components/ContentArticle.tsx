@@ -67,7 +67,6 @@ export default function ContentArticle({
             <span>·</span>
             <LikeButton
               contentId={item.id}
-              type={type}
               initialCount={item._count?.likes ?? 0}
               initialLiked={item.likedByMe ?? false}
             />
@@ -115,7 +114,6 @@ export default function ContentArticle({
         {/* Izohlar */}
         <CommentSection
           contentId={item.id}
-          type={type}
           initialComments={item.comments ?? []}
           totalCount={item.commentCount}
         />

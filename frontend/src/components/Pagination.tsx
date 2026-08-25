@@ -1,7 +1,8 @@
 import Link from "next/link";
 
 interface Props {
-  basePath: string; // masalan "/news"
+  /** "/news" yoki filtrlari bor "/posts?type=NEWS" ko'rinishida. */
+  basePath: string;
   page: number;
   totalPages: number;
 }
@@ -13,7 +14,10 @@ export default function Pagination({ basePath, page, totalPages }: Props) {
   const prev = page > 1 ? page - 1 : null;
   const next = page < totalPages ? page + 1 : null;
 
-  const linkFor = (p: number) => `${basePath}?page=${p}`;
+  // basePath'da allaqachon filtr bo'lishi mumkin (`/posts?type=NEWS`), unda
+  // sahifa raqami `&` bilan qo'shiladi — aks holda filtr yo'qolardi.
+  const linkFor = (p: number) =>
+    `${basePath}${basePath.includes("?") ? "&" : "?"}page=${p}`;
 
   return (
     <div className="mt-12 flex items-center justify-center gap-4">

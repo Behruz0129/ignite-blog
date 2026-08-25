@@ -20,6 +20,20 @@ import { postService } from "../services/post.service";
 import { AppError } from "../utils/AppError";
 
 export function createPostController(type?: PostType) {
+  /**
+   * Amaldagi tur: route'ga biriktirilgani ustun, bo'lmasa so'rovdagi `?type=`.
+   *
+   * Diqqat: bu ataylab funksiya. Ilgari `{ ...req.query, type }` yozilgan edi
+   * va aralash `/posts` yo'lida `type` `undefined` bo'lgani uchun so'rovdagi
+   * filtrni ustidan o'chirib yuborardi — "Yangiliklar" tanlansa ham
+   * qo'llanmalar chiqib qolardi.
+   */
+  function resolveType(req: Request): PostType | undefined {
+    if (type) return type;
+    const fromQuery = req.query.type;
+    return typeof fromQuery === "string" ? (fromQuery as PostType) : undefined;
+  }
+
   /** Turni talab qiladigan amallar uchun. */
   function requireType(): PostType {
     if (!type) {
@@ -33,7 +47,7 @@ export function createPostController(type?: PostType) {
     publicList: asyncHandler(async (req: Request, res: Response) => {
       const { items, meta } = await postService.list({
         ...req.query,
-        type,
+        type: resolveType(req),
         onlyPublished: true,
         userId: req.user?.id,
       });
@@ -52,7 +66,10 @@ export function createPostController(type?: PostType) {
 
     // --- ADMIN ---
     adminList: asyncHandler(async (req: Request, res: Response) => {
-      const { items, meta } = await postService.list({ ...req.query, type });
+      const { items, meta } = await postService.list({
+        ...req.query,
+        type: resolveType(req),
+      });
       return paginated(res, items, meta);
     }),
 

@@ -6,6 +6,7 @@
 // muvozanatlaydi (minglab tashrifchiga bardosh berish uchun).
 
 import type {
+  ResourceGroups,
   ApiResponse,
   ContentItem,
   ContentType,
@@ -76,6 +77,17 @@ export async function getList(
   };
 }
 
+/**
+ * Aralash ro'yxat: uchala tur birga. `type` berilsa bitta tur bilan cheklanadi.
+ * Kategoriya, teg va qidiruv filtrlarini ham shu endpoint qabul qiladi.
+ */
+export async function getPosts(
+  params: ListParams & { type?: string; search?: string } = {}
+): Promise<{ items: ContentItem[]; meta: PaginationMeta | null }> {
+  const res = await apiGet<ContentItem[]>(`/posts${buildQuery(params)}`);
+  return { items: res?.data ?? [], meta: res?.meta ?? null };
+}
+
 // Bitta kontent (slug bo'yicha)
 export async function getBySlug(
   type: ContentType,
@@ -83,6 +95,18 @@ export async function getBySlug(
 ): Promise<ContentItem | null> {
   const res = await apiGet<ContentItem>(`/${type}/${slug}`);
   return res?.data ?? null;
+}
+
+// Foydali resurslar (guruhlangan holda keladi)
+export async function getResources(): Promise<ResourceGroups> {
+  const res = await apiGet<ResourceGroups>("/resources");
+  return res?.data ?? { total: 0, groups: [] };
+}
+
+// Teglar (teg sahifasi va filtrlar uchun)
+export async function getTags() {
+  const res = await apiGet<{ id: string; name: string; slug: string }[]>("/tags");
+  return res?.data ?? [];
 }
 
 // Kategoriyalar (footer / navigatsiya uchun)

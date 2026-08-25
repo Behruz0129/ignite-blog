@@ -240,6 +240,30 @@ model Like {
   @@map("likes")
 }
 
+
+// ---------------------------- RESOURCES --------------------------
+// Foydali havolalar to'plami: asboblar, kanallar, saytlar va h.k.
+// Maqoladan farqi — bu yerda matn emas, tashqi havola asosiy narsa.
+
+model Resource {
+  id          String        @id @default(cuid())
+  title       String
+  description String? // bir-ikki jumla: nima uchun foydali
+  url         String // tashqi havola
+  image       String? // Cloudinary URL yoki tashqi rasm
+  /// Erkin guruh nomi ("Asboblar", "YouTube kanallar", ...). Ataylab enum
+  /// emas: yangi guruh qo'shish uchun migratsiya kerak bo'lmasin.
+  group       String?
+  status      ContentStatus @default(PUBLISHED)
+  /// Qo'lda saralash uchun. Kichik raqam — yuqorida.
+  order       Int           @default(0)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status, order])
+  @@map("resources")
+}
+
 // ----------------------------- MEDIA -----------------------------
 
 model Media {

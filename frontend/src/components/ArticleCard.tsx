@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { ContentItem, ContentType } from "@/lib/types";
+import { postTypeToUrl } from "@/lib/format";
 import { formatDate, readingTime } from "@/lib/format";
 import ArticleCardFooter from "./ArticleCardFooter";
 
@@ -12,7 +13,10 @@ interface Props {
 }
 
 export default function ArticleCard({ item, type, featured = false }: Props) {
-  const href = `/${type}/${item.slug}`;
+  // Aralash ro'yxatda (`/posts`) har element turli turda bo'ladi, shuning
+  // uchun havola avval elementning o'z turidan yasaladi; `type` prop esa
+  // bitta turdagi sahifalar uchun zaxira sifatida qoladi.
+  const href = `/${item.type ? postTypeToUrl(item.type) : type}/${item.slug}`;
 
   return (
     <Link
@@ -68,7 +72,6 @@ export default function ArticleCard({ item, type, featured = false }: Props) {
           <span>{readingTime(item)} daqiqa o&apos;qish</span>
           <ArticleCardFooter
             contentId={item.id}
-            type={type}
             likeCount={item._count?.likes}
             likedByMe={item.likedByMe}
           />
