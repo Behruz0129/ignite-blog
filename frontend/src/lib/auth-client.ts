@@ -134,6 +134,27 @@ export async function login(email: string, password: string) {
   return res.data.user;
 }
 
+/**
+ * OAuth'dan qaytgan bir martalik kodni tokenlarga almashtiradi.
+ *
+ * Ilgari tokenlar to'g'ridan-to'g'ri redirect URL'ida kelardi va brauzer
+ * tarixida qolardi; endi URL'da faqat 60 soniya yashaydigan kod bo'ladi.
+ */
+export async function exchangeOAuthCode(code: string) {
+  const res = await authFetch<{
+    token: string;
+    refreshToken: string;
+    user: AuthUser;
+  }>("/auth/exchange", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code }),
+  });
+  if (!res.ok || !res.data) throw new Error(res.message || "Kirish yakunlanmadi");
+  saveAuth(res.data.token, res.data.user, res.data.refreshToken);
+  return res.data.user;
+}
+
 export async function register(name: string, email: string, password: string) {
   const res = await authFetch<{ message: string; email: string }>("/auth/register", {
     method: "POST",

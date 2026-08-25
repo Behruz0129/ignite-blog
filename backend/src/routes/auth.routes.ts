@@ -42,6 +42,8 @@ router.post(
 router.post("/telegram", authLimiter, validate(telegramAuthSchema), authController.telegramLogin);
 
 router.post("/refresh", refreshLimiter, validate(refreshSchema), authController.refresh);
+// OAuth'dan qaytgan bir martalik kodni tokenlarga almashtirish
+router.post("/exchange", authLimiter, authController.exchange);
 router.post("/logout", authController.logout);
 router.get("/me", authenticate, authController.me);
 

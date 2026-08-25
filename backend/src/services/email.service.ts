@@ -6,7 +6,7 @@
  */
 
 import { Resend } from "resend";
-import { env, isEmailConfigured } from "../config/env";
+import { env, frontendUrl, isEmailConfigured } from "../config/env";
 import { logger } from "../config/logger";
 import { AppError } from "../utils/AppError";
 
@@ -46,7 +46,7 @@ async function sendEmail(to: string, subject: string, html: string) {
 
 export const emailService = {
   async sendVerification(to: string, name: string, token: string) {
-    const link = `${env.FRONTEND_URL}/verify-email?token=${token}`;
+    const link = `${frontendUrl}/verify-email?token=${token}`;
     const html = `
       <h2>Salom, ${name}!</h2>
       <p>Ignite Blog'da ro'yxatdan o'tganingiz uchun rahmat.</p>
@@ -59,7 +59,7 @@ export const emailService = {
   },
 
   async sendPasswordReset(to: string, name: string, token: string) {
-    const link = `${env.FRONTEND_URL}/reset-password?token=${token}`;
+    const link = `${frontendUrl}/reset-password?token=${token}`;
     const html = `
       <h2>Salom, ${name}!</h2>
       <p>Parolingizni tiklash so'rovi qabul qilindi.</p>

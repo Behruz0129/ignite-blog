@@ -12,6 +12,7 @@ import express, { Application } from "express";
 import helmet from "helmet";
 import cors from "cors";
 import compression from "compression";
+import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import swaggerUi from "swagger-ui-express";
 
@@ -54,7 +55,10 @@ export function createApp(): Application {
     })
   );
 
-  // 3) Javoblarni siqish (gzip) - tezlik uchun
+  // 3) Cookie'lar — hozircha faqat OAuth `state` (CSRF) uchun kerak.
+  app.use(cookieParser());
+
+  // 4) Javoblarni siqish (gzip) - tezlik uchun
   app.use(compression());
 
   // 4) Body parserlar (JSON va form). Limit - katta kontent (maqolalar) uchun.

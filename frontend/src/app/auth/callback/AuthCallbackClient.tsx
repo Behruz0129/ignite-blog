@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { saveAuth } from "@/lib/auth-client";
+import { exchangeOAuthCode } from "@/lib/auth-client";
 import { useAuth } from "@/components/AuthProvider";
 
 export default function AuthCallbackClient() {
@@ -10,27 +10,32 @@ export default function AuthCallbackClient() {
   const params = useSearchParams();
   const { refresh } = useAuth();
   const [error, setError] = useState("");
+  // Kod bir martalik: React qat'iy rejimda effekt ikki marta ishlasa,
+  // ikkinchi urinish "kod yaroqsiz" xatosini berardi.
+  const started = useRef(false);
 
   useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+
     const err = params.get("error");
     if (err) {
       setError(decodeURIComponent(err));
       return;
     }
 
-    const token = params.get("token");
-    const refreshToken = params.get("refreshToken");
-    if (!token) {
-      setError("Token topilmadi");
+    const code = params.get("code");
+    if (!code) {
+      setError("Kirish kodi topilmadi");
       return;
     }
 
-    saveAuth(
-      token,
-      { id: "", name: "", email: "", role: "USER" },
-      refreshToken || undefined
-    );
-    refresh().then(() => router.replace("/"));
+    exchangeOAuthCode(code)
+      .then(() => refresh())
+      .then(() => router.replace("/"))
+      .catch((e: unknown) => {
+        setError(e instanceof Error ? e.message : "Kirish yakunlanmadi");
+      });
   }, [params, refresh, router]);
 
   if (error) {

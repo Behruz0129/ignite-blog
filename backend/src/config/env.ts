@@ -89,6 +89,23 @@ export const isCloudinaryConfigured = Boolean(
  * default `http://localhost:3000` sifatida qolib ketgan edi — natijada
  * saytdagi kirish, like va izohlar jimgina bloklangan.
  */
+/**
+ * Manzil oxiridagi `/` ni olib tashlaydi.
+ *
+ * `${FRONTEND_URL}/auth/callback` kabi birikmalar hamma joyda ishlatiladi;
+ * env'da oxirida slash qolsa `//auth/callback` hosil bo'ladi. Ba'zi
+ * provayderlar (OAuth redirect_uri) buni boshqa manzil deb hisoblaydi.
+ */
+function trimSlash(url: string): string {
+  return url.replace(/\/+$/, "");
+}
+
+/** Ommaviy sayt manzili — email havolalari va OAuth qaytishi shunga tayanadi. */
+export const frontendUrl = trimSlash(env.FRONTEND_URL);
+
+/** Backend'ning o'z manzili — OAuth callback shundan quriladi. */
+export const oauthCallbackBase = trimSlash(env.OAUTH_CALLBACK_BASE);
+
 export const corsOrigins = Array.from(
   new Set(
     [...env.CORS_ORIGIN.split(","), env.FRONTEND_URL]

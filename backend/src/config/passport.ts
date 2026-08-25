@@ -18,6 +18,7 @@ import { Strategy as DiscordStrategy } from "passport-discord";
 
 import {
   env,
+  oauthCallbackBase,
   isGoogleConfigured,
   isDiscordConfigured,
 } from "./env";
@@ -30,7 +31,7 @@ export function configurePassport() {
         {
           clientID: env.GOOGLE_CLIENT_ID as string,
           clientSecret: env.GOOGLE_CLIENT_SECRET as string,
-          callbackURL: `${env.OAUTH_CALLBACK_BASE}/api/auth/google/callback`,
+          callbackURL: `${oauthCallbackBase}/api/auth/google/callback`,
           scope: ["profile", "email"],
         },
         async (
@@ -62,7 +63,7 @@ export function configurePassport() {
         {
           clientID: env.DISCORD_CLIENT_ID as string,
           clientSecret: env.DISCORD_CLIENT_SECRET as string,
-          callbackURL: `${env.OAUTH_CALLBACK_BASE}/api/auth/discord/callback`,
+          callbackURL: `${oauthCallbackBase}/api/auth/discord/callback`,
           scope: ["identify", "email"],
         },
         async (

@@ -24,7 +24,8 @@ import {
   sendTelegramMessage,
   type TelegramAuthData,
 } from "./telegram.service";
-import { env } from "../config/env";
+import { frontendUrl } from "../config/env";
+import { logger } from "../config/logger";
 import type { User } from "@prisma/client";
 
 function publicUser(user: User) {
@@ -204,7 +205,7 @@ export const authService = {
 
     // Telegram bog'langan bo'lsa — bot orqali ham yuboramiz
     if (user.telegramId) {
-      const link = `${env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+      const link = `${frontendUrl}/reset-password?token=${resetToken}`;
       await sendTelegramMessage(
         user.telegramId,
         `🔐 <b>Parolni tiklash</b>\n\nSalom, ${user.name}!\n\n<a href="${link}">Parolni tiklash</a>\n\nHavola 1 soat amal qiladi.`
@@ -286,7 +287,31 @@ export const authService = {
       include: { user: true },
     });
 
-    if (!record || record.revokedAt || record.expiresAt < new Date()) {
+    if (!record) {
+      throw AppError.unauthorized("Refresh token yaroqsiz yoki muddati tugagan");
+    }
+
+    /**
+     * Allaqachon ishlatilgan (bekor qilingan) token qayta kelsa — bu o'g'rilik
+     * belgisi: rotatsiyadan keyin haqiqiy foydalanuvchi yangi tokenga o'tgan,
+     * eskisi esa faqat uni ushlab olgan tomonda qoladi. Kim birinchi
+     * kelganini bilib bo'lmagani uchun eng xavfsiz yo'l — shu foydalanuvchining
+     * BARCHA sessiyalarini yopish va qayta kirishga majburlash.
+     */
+    if (record.revokedAt) {
+      await prisma.refreshToken.updateMany({
+        where: { userId: record.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      logger.warn(
+        `Refresh token qayta ishlatildi (userId=${record.userId}) — barcha sessiyalar yopildi`
+      );
+      throw AppError.unauthorized(
+        "Sessiya xavfsizlik sababli yopildi. Iltimos, qaytadan kiring."
+      );
+    }
+
+    if (record.expiresAt < new Date()) {
       throw AppError.unauthorized("Refresh token yaroqsiz yoki muddati tugagan");
     }
 

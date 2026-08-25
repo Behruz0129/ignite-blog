@@ -80,6 +80,7 @@ model User {
   comments      Comment[]
   likes         Like[]
   refreshTokens RefreshToken[]
+  authCodes     AuthCode[]
 
   @@index([email])
   @@map("users")
@@ -99,6 +100,26 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+/// OAuth'dan qaytishda beriladigan BIR MARTALIK kod.
+///
+/// Ilgari access va refresh tokenlar to'g'ridan-to'g'ri redirect URL'ining
+/// query qismida uzatilardi — ular brauzer tarixida qolar, `Referer`
+/// sarlavhasi orqali begona saytga sizib chiqar va server loglariga tushardi.
+/// Endi URL'da faqat qisqa muddatli kod ketadi; mijoz uni POST orqali
+/// tokenlarga almashtiradi va kod shu zahoti kuyadi.
+model AuthCode {
+  id        String    @id @default(cuid())
+  codeHash  String    @unique // kodning sha256 hash'i
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("auth_codes")
 }
 
 // ----------------------------- NEWS ------------------------------
