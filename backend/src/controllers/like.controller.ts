@@ -7,10 +7,10 @@ import { AppError } from "../utils/AppError";
 export const likeController = {
   toggle: asyncHandler(async (req: Request, res: Response) => {
     if (!req.user) throw AppError.unauthorized();
-    const result = await likeService.toggle({
-      userId: req.user.id,
-      ...req.body,
-    });
+    const postId = typeof req.body?.postId === "string" ? req.body.postId : "";
+    if (!postId) throw AppError.badRequest("postId majburiy");
+
+    const result = await likeService.toggle(req.user.id, postId);
     return ok(res, result);
   }),
 };

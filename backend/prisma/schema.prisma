@@ -31,6 +31,15 @@ enum AuthProvider {
 }
 
 // Kontent holati: qoralama yoki chop etilgan
+/// Kontent turi. Ilgari uchta alohida jadval bor edi (news/guides/opinions)
+/// va ular uchun deyarli bir xil kod uch marta yozilardi. Endi bitta jadval,
+/// farq faqat shu maydonda.
+enum PostType {
+  NEWS
+  GUIDE
+  OPINION
+}
+
 enum ContentStatus {
   DRAFT
   PUBLISHED
@@ -72,9 +81,7 @@ model User {
   updatedAt DateTime     @updatedAt
 
   // Bu foydalanuvchi yaratgan kontentlar
-  news     News[]
-  guides   Guide[]
-  opinions Opinion[]
+  posts Post[]
 
   // Foydalanuvchi faoliyati
   comments      Comment[]
@@ -122,12 +129,13 @@ model AuthCode {
   @@map("auth_codes")
 }
 
-// ----------------------------- NEWS ------------------------------
+// ------------------------------ POSTS ----------------------------
 
-model News {
+model Post {
   id              String        @id @default(cuid())
+  type            PostType
   title           String
-  slug            String        @unique
+  slug            String
   excerpt         String? // qisqacha tavsif (ro'yxatlarda ko'rsatiladi)
   content         String // HTML (Tiptap editordan)
   featuredImage   String? // Cloudinary URL
@@ -135,97 +143,33 @@ model News {
   metaDescription String?
   status          ContentStatus @default(DRAFT)
   publishedAt     DateTime?
+
   /// Telegram kanalga yuborilgan vaqt. Bir maqola ikki marta yuborilmasligi
   /// uchun: chop etilgandan keyin tahrirlansa yoki qayta chop etilsa ham
   /// obunachilar bir xil xabarni ikkinchi bor olmaydi.
   telegramPostedAt DateTime?
+
+  /// Faqat GUIDE turi uchun to'ldiriladi.
+  difficulty Difficulty?
+
   // Ro'yxat endpointlari content'ni qaytarmaydi, shuning uchun o'qish
   // vaqti yozish paytida hisoblanadi (utils/readingTime.ts)
-  readingMinutes  Int           @default(1)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  readingMinutes Int      @default(1)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   authorId   String?
   author     User?      @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  categories Category[] @relation("NewsCategories")
-  tags       Tag[]      @relation("NewsTags")
+  categories Category[] @relation("PostCategories")
+  tags       Tag[]      @relation("PostTags")
   comments   Comment[]
   likes      Like[]
 
+  /// Slug tur ichida unikal: `/news/x` va `/guides/x` bir vaqtda bo'la oladi.
+  @@unique([type, slug])
+  @@index([type, status, publishedAt])
   @@index([status, publishedAt])
-  @@index([slug])
-  @@map("news")
-}
-
-// ----------------------------- GUIDES ----------------------------
-
-model Guide {
-  id              String        @id @default(cuid())
-  title           String
-  slug            String        @unique
-  excerpt         String?
-  content         String
-  featuredImage   String?
-  metaTitle       String?
-  metaDescription String?
-  difficulty      Difficulty    @default(BEGINNER)
-  status          ContentStatus @default(DRAFT)
-  publishedAt     DateTime?
-  /// Telegram kanalga yuborilgan vaqt. Bir maqola ikki marta yuborilmasligi
-  /// uchun: chop etilgandan keyin tahrirlansa yoki qayta chop etilsa ham
-  /// obunachilar bir xil xabarni ikkinchi bor olmaydi.
-  telegramPostedAt DateTime?
-  // Ro'yxat endpointlari content'ni qaytarmaydi, shuning uchun o'qish
-  // vaqti yozish paytida hisoblanadi (utils/readingTime.ts)
-  readingMinutes  Int           @default(1)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  authorId   String?
-  author     User?      @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  categories Category[] @relation("GuideCategories")
-  tags       Tag[]      @relation("GuideTags")
-  comments   Comment[]
-  likes      Like[]
-
-  @@index([status, publishedAt])
-  @@index([slug])
-  @@map("guides")
-}
-
-// ----------------------------- OPINIONS --------------------------
-
-model Opinion {
-  id              String        @id @default(cuid())
-  title           String
-  slug            String        @unique
-  excerpt         String?
-  content         String
-  featuredImage   String?
-  metaTitle       String?
-  metaDescription String?
-  status          ContentStatus @default(DRAFT)
-  publishedAt     DateTime?
-  /// Telegram kanalga yuborilgan vaqt. Bir maqola ikki marta yuborilmasligi
-  /// uchun: chop etilgandan keyin tahrirlansa yoki qayta chop etilsa ham
-  /// obunachilar bir xil xabarni ikkinchi bor olmaydi.
-  telegramPostedAt DateTime?
-  // Ro'yxat endpointlari content'ni qaytarmaydi, shuning uchun o'qish
-  // vaqti yozish paytida hisoblanadi (utils/readingTime.ts)
-  readingMinutes  Int           @default(1)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  authorId   String?
-  author     User?      @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  categories Category[] @relation("OpinionCategories")
-  tags       Tag[]      @relation("OpinionTags")
-  comments   Comment[]
-  likes      Like[]
-
-  @@index([status, publishedAt])
-  @@index([slug])
-  @@map("opinions")
+  @@map("posts")
 }
 
 // --------------------------- CATEGORIES --------------------------
@@ -235,9 +179,7 @@ model Category {
   name String @unique
   slug String @unique
 
-  news     News[]    @relation("NewsCategories")
-  guides   Guide[]   @relation("GuideCategories")
-  opinions Opinion[] @relation("OpinionCategories")
+  posts Post[] @relation("PostCategories")
 
   @@map("categories")
 }
@@ -249,9 +191,7 @@ model Tag {
   name String @unique
   slug String @unique
 
-  news     News[]    @relation("NewsTags")
-  guides   Guide[]   @relation("GuideTags")
-  opinions Opinion[] @relation("OpinionTags")
+  posts Post[] @relation("PostTags")
 
   @@map("tags")
 }
@@ -270,15 +210,12 @@ model Comment {
   userId String?
   user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  // Izoh qaysi kontentga tegishli (faqat bittasi to'ldiriladi)
-  newsId    String?
-  news      News?    @relation(fields: [newsId], references: [id], onDelete: Cascade)
-  guideId   String?
-  guide     Guide?   @relation(fields: [guideId], references: [id], onDelete: Cascade)
-  opinionId String?
-  opinion   Opinion? @relation(fields: [opinionId], references: [id], onDelete: Cascade)
+  // Izoh qaysi maqolaga tegishli
+  postId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@index([status])
+  @@index([postId])
   @@index([userId])
   @@map("comments")
 }
@@ -292,19 +229,14 @@ model Like {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
-  // Like qaysi kontentga (faqat bittasi to'ldiriladi)
-  newsId    String?
-  news      News?    @relation(fields: [newsId], references: [id], onDelete: Cascade)
-  guideId   String?
-  guide     Guide?   @relation(fields: [guideId], references: [id], onDelete: Cascade)
-  opinionId String?
-  opinion   Opinion? @relation(fields: [opinionId], references: [id], onDelete: Cascade)
+  // Like qaysi maqolaga
+  postId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
 
-  // Bir user + bitta kontent uchun yagona like
-  @@unique([userId, newsId])
-  @@unique([userId, guideId])
-  @@unique([userId, opinionId])
+  // Bir user bitta maqolaga faqat bir marta like bosadi
+  @@unique([userId, postId])
   @@index([userId])
+  @@index([postId])
   @@map("likes")
 }
 

@@ -71,9 +71,7 @@ export default function TaxonomyManager({ apiPath, title, hint }: Props) {
 
   async function remove(item: Taxonomy) {
     const used =
-      (item._count?.news ?? 0) +
-      (item._count?.guides ?? 0) +
-      (item._count?.opinions ?? 0);
+      item._count?.posts ?? 0;
 
     const warning = used
       ? `"${item.name}" ${used} ta yozuvda ishlatilgan. O'chirilsinmi?`
@@ -158,9 +156,7 @@ export default function TaxonomyManager({ apiPath, title, hint }: Props) {
             ) : (
               items.map((item) => {
                 const used =
-                  (item._count?.news ?? 0) +
-                  (item._count?.guides ?? 0) +
-                  (item._count?.opinions ?? 0);
+                  item._count?.posts ?? 0;
                 const editing = editId === item.id;
 
                 return (

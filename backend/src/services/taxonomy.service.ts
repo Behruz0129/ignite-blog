@@ -33,7 +33,7 @@ export function createTaxonomyService(model: TaxModel) {
         where,
         orderBy: { name: "asc" },
         include: {
-          _count: { select: { news: true, guides: true, opinions: true } },
+          _count: { select: { posts: true } },
         },
       });
     },

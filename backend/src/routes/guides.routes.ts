@@ -24,15 +24,10 @@
  *       200: { description: Qo'llanma }
  */
 
-import { makeContentRouter } from "./content.routes";
-import { guideService } from "../services/content.service";
+import { makePostRouter } from "./post.routes";
 import {
   createGuideSchema,
   updateGuideSchema,
 } from "../validators/content.validator";
 
-export default makeContentRouter(
-  guideService,
-  createGuideSchema,
-  updateGuideSchema
-);
+export default makePostRouter("GUIDE", createGuideSchema, updateGuideSchema);

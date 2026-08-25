@@ -18,12 +18,6 @@ interface Props {
   totalCount?: number;
 }
 
-function fieldFor(type: ContentType): "newsId" | "guideId" | "opinionId" {
-  if (type === "news") return "newsId";
-  if (type === "guides") return "guideId";
-  return "opinionId";
-}
-
 function displayName(c: PublicComment): string {
   return c.user?.name || c.authorName || "Mehmon";
 }
@@ -71,7 +65,7 @@ export default function CommentSection({
       body.authorName = name;
       body.authorEmail = email;
     }
-    body[fieldFor(type)] = contentId;
+    body.postId = contentId;
 
     try {
       const res = await fetch(`${PUBLIC_API_URL}/comments`, {

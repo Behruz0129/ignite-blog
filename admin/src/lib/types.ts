@@ -10,7 +10,7 @@ export interface Taxonomy {
   id: string;
   name: string;
   slug: string;
-  _count?: { news: number; guides: number; opinions: number };
+  _count?: { posts: number };
 }
 
 export interface ContentItem {
@@ -33,6 +33,8 @@ export interface ContentItem {
   _count?: { comments: number };
 }
 
+export type PostType = "NEWS" | "GUIDE" | "OPINION";
+
 export interface Comment {
   id: string;
   authorName?: string | null;
@@ -41,9 +43,7 @@ export interface Comment {
   status: CommentStatus;
   createdAt: string;
   user?: { id: string; name: string; avatar?: string | null } | null;
-  news?: { id: string; title: string; slug: string } | null;
-  guide?: { id: string; title: string; slug: string } | null;
-  opinion?: { id: string; title: string; slug: string } | null;
+  post?: { id: string; type: PostType; title: string; slug: string } | null;
 }
 
 export interface Media {

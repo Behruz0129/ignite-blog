@@ -82,11 +82,12 @@ export default function CommentsPage() {
     }
   }
 
+  /** Izoh qaysi maqolaga tegishli — turiga qarab ikonka tanlanadi. */
   function target(c: Comment) {
-    if (c.news) return { label: c.news.title, icon: "news" as const };
-    if (c.guide) return { label: c.guide.title, icon: "guide" as const };
-    if (c.opinion) return { label: c.opinion.title, icon: "opinion" as const };
-    return null;
+    if (!c.post) return null;
+    const icon =
+      c.post.type === "GUIDE" ? "guide" : c.post.type === "OPINION" ? "opinion" : "news";
+    return { label: c.post.title, icon: icon as "news" | "guide" | "opinion" };
   }
 
   return (

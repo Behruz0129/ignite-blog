@@ -1,7 +1,10 @@
 /**
- * CONTENT ROUTES (factory)
- * ------------------------
- * News/Guides/Opinions uchun bir xil route to'plamini yaratadi.
+ * POST ROUTES (factory)
+ * ---------------------
+ * News/Guides/Opinions uchun bir xil route to'plamini yaratadi — farq faqat
+ * `type` da. `type` berilmasa faqat umumiy ro'yxat ochiladi (aralash oqim):
+ * bitta yozuvni slug bo'yicha olish uchun tur kerak, chunki slug tur ichida
+ * unikal.
  *
  * Public (token shart emas):
  *   GET    /            -> chop etilgan ro'yxat (search/filter/sort/pagination)
@@ -19,8 +22,8 @@
 
 import { Router } from "express";
 import { AnyZodObject } from "zod";
-import { createContentService } from "../services/content.service";
-import { createContentController } from "../controllers/content.controller";
+import type { PostType } from "@prisma/client";
+import { createPostController } from "../controllers/post.controller";
 import { authenticate, authorize, optionalAuth } from "../middlewares/auth.middleware";
 import { validate } from "../middlewares/validate.middleware";
 import { publicCache } from "../middlewares/cache.middleware";
@@ -30,15 +33,13 @@ import {
   slugParamSchema,
 } from "../validators/common.validator";
 
-type ContentService = ReturnType<typeof createContentService>;
-
-export function makeContentRouter(
-  service: ContentService,
+export function makePostRouter(
+  type: PostType | undefined,
   createSchema: AnyZodObject,
   updateSchema: AnyZodObject
 ): Router {
   const router = Router();
-  const ctrl = createContentController(service);
+  const ctrl = createPostController(type);
 
   // --- PUBLIC ---
   router.get("/", publicCache(), optionalAuth, validate(listQuerySchema, "query"), ctrl.publicList);
@@ -102,8 +103,18 @@ export function makeContentRouter(
     ctrl.unpublish
   );
 
-  // Public slug route - eng oxirida (boshqa yo'llarni "yutib yubormasligi" uchun)
-  router.get("/:slug", publicCache(), optionalAuth, validate(slugParamSchema, "params"), ctrl.publicGetBySlug);
+  // Public slug route - eng oxirida (boshqa yo'llarni "yutib yubormasligi" uchun).
+  // Aralash ro'yxatda (`type` yo'q) slug bilan ochish ma'nosiz: bir slug turli
+  // turlarda takrorlanishi mumkin.
+  if (type) {
+    router.get(
+      "/:slug",
+      publicCache(),
+      optionalAuth,
+      validate(slugParamSchema, "params"),
+      ctrl.publicGetBySlug
+    );
+  }
 
   return router;
 }

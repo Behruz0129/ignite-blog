@@ -24,15 +24,10 @@
  *       200: { description: Maqola }
  */
 
-import { makeContentRouter } from "./content.routes";
-import { opinionService } from "../services/content.service";
+import { makePostRouter } from "./post.routes";
 import {
   createOpinionSchema,
   updateOpinionSchema,
 } from "../validators/content.validator";
 
-export default makeContentRouter(
-  opinionService,
-  createOpinionSchema,
-  updateOpinionSchema
-);
+export default makePostRouter("OPINION", createOpinionSchema, updateOpinionSchema);

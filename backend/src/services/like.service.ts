@@ -1,78 +1,46 @@
 /**
  * LIKE SERVICE
  * ------------
- * Ro'yxatdan o'tgan foydalanuvchi kontentga like bosadi/oladi (toggle).
+ * Ro'yxatdan o'tgan foydalanuvchi maqolaga like bosadi/oladi (toggle).
+ *
+ * Ilgari uchta alohida havola maydoni bor edi (newsId/guideId/opinionId) va
+ * har amalda qaysi biri to'ldirilganini aniqlash kerak bo'lardi. Kontent
+ * bitta jadvalga birlashgach, `postId` yetarli.
  */
 
 import { prisma } from "../config/prisma";
 import { AppError } from "../utils/AppError";
 
-interface ToggleInput {
-  userId: string;
-  newsId?: string;
-  guideId?: string;
-  opinionId?: string;
-}
-
 export const likeService = {
-  async toggle(input: ToggleInput) {
-    const { userId, newsId, guideId, opinionId } = input;
+  async toggle(userId: string, postId: string) {
+    const post = await prisma.post.findUnique({
+      where: { id: postId },
+      select: { id: true },
+    });
+    if (!post) throw AppError.notFound("Maqola topilmadi");
 
-    // Kontent mavjudligini tekshiramiz
-    if (newsId) {
-      const exists = await prisma.news.findUnique({ where: { id: newsId } });
-      if (!exists) throw AppError.notFound("Yangilik topilmadi");
-    } else if (guideId) {
-      const exists = await prisma.guide.findUnique({ where: { id: guideId } });
-      if (!exists) throw AppError.notFound("Qo'llanma topilmadi");
-    } else if (opinionId) {
-      const exists = await prisma.opinion.findUnique({ where: { id: opinionId } });
-      if (!exists) throw AppError.notFound("Maqola topilmadi");
-    }
-
-    const where = newsId
-      ? { userId_newsId: { userId, newsId } }
-      : guideId
-        ? { userId_guideId: { userId, guideId } }
-        : { userId_opinionId: { userId, opinionId: opinionId! } };
-
-    const existing = await prisma.like.findUnique({ where });
+    const existing = await prisma.like.findUnique({
+      where: { userId_postId: { userId, postId } },
+    });
 
     if (existing) {
       await prisma.like.delete({ where: { id: existing.id } });
-      const count = await this.count({ newsId, guideId, opinionId });
-      return { liked: false, likeCount: count };
+      return { liked: false, likeCount: await this.count(postId) };
     }
 
-    await prisma.like.create({
-      data: {
-        userId,
-        newsId: newsId ?? null,
-        guideId: guideId ?? null,
-        opinionId: opinionId ?? null,
-      },
+    await prisma.like.create({ data: { userId, postId } });
+    return { liked: true, likeCount: await this.count(postId) };
+  },
+
+  async count(postId: string) {
+    return prisma.like.count({ where: { postId } });
+  },
+
+  async likedByUser(userId: string, postId: string) {
+    const found = await prisma.like.findUnique({
+      where: { userId_postId: { userId, postId } },
+      select: { id: true },
     });
-
-    const count = await this.count({ newsId, guideId, opinionId });
-    return { liked: true, likeCount: count };
-  },
-
-  async count(params: { newsId?: string; guideId?: string; opinionId?: string }) {
-    const { newsId, guideId, opinionId } = params;
-    if (newsId) return prisma.like.count({ where: { newsId } });
-    if (guideId) return prisma.like.count({ where: { guideId } });
-    if (opinionId) return prisma.like.count({ where: { opinionId } });
-    return 0;
-  },
-
-  async likedByUser(userId: string, params: { newsId?: string; guideId?: string; opinionId?: string }) {
-    const { newsId, guideId, opinionId } = params;
-    const where = newsId
-      ? { userId, newsId }
-      : guideId
-        ? { userId, guideId }
-        : { userId, opinionId };
-    const found = await prisma.like.findFirst({ where });
     return Boolean(found);
   },
 };

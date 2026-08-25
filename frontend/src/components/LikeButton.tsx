@@ -14,12 +14,6 @@ interface Props {
   compact?: boolean;
 }
 
-function fieldFor(type: ContentType): "newsId" | "guideId" | "opinionId" {
-  if (type === "news") return "newsId";
-  if (type === "guides") return "guideId";
-  return "opinionId";
-}
-
 export default function LikeButton({
   contentId,
   type,
@@ -46,7 +40,7 @@ export default function LikeButton({
     try {
       const result = await authPost<{ liked: boolean; likeCount: number }>(
         "/likes/toggle",
-        { [fieldFor(type)]: contentId }
+        { postId: contentId }
       );
       setLiked(result.liked);
       setCount(result.likeCount);

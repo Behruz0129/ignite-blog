@@ -33,11 +33,10 @@
  *       404: { description: Topilmadi }
  */
 
-import { makeContentRouter } from "./content.routes";
-import { newsService } from "../services/content.service";
+import { makePostRouter } from "./post.routes";
 import {
   createNewsSchema,
   updateNewsSchema,
 } from "../validators/content.validator";
 
-export default makeContentRouter(newsService, createNewsSchema, updateNewsSchema);
+export default makePostRouter("NEWS", createNewsSchema, updateNewsSchema);

@@ -17,6 +17,7 @@
 
 import {
   PrismaClient,
+  PostType,
   ContentStatus,
   Difficulty,
   CommentStatus,
@@ -364,27 +365,18 @@ async function upsertArticle(kind: Kind, a: Article, authorId: string) {
     tags: { set: [], connect: a.tags.map((slug) => ({ slug })) },
   };
 
-  if (kind === "guides") {
-    const extra = { difficulty: a.difficulty ?? Difficulty.BEGINNER };
-    return prisma.guide.upsert({
-      where: { slug: a.slug },
-      update: { ...base, ...extra, ...relReset },
-      create: { slug: a.slug, ...base, ...extra, ...rel },
-    });
-  }
+  // Kontent bitta jadvalda: tur `type` maydonida.
+  const type =
+    kind === "guides" ? PostType.GUIDE : kind === "opinions" ? PostType.OPINION : PostType.NEWS;
+  const extra =
+    type === PostType.GUIDE
+      ? { difficulty: a.difficulty ?? Difficulty.BEGINNER }
+      : {};
 
-  if (kind === "opinions") {
-    return prisma.opinion.upsert({
-      where: { slug: a.slug },
-      update: { ...base, ...relReset },
-      create: { slug: a.slug, ...base, ...rel },
-    });
-  }
-
-  return prisma.news.upsert({
-    where: { slug: a.slug },
-    update: { ...base, ...relReset },
-    create: { slug: a.slug, ...base, ...rel },
+  return prisma.post.upsert({
+    where: { type_slug: { type, slug: a.slug } },
+    update: { ...base, ...extra, ...relReset },
+    create: { type, slug: a.slug, ...base, ...extra, ...rel },
   });
 }
 
@@ -465,14 +457,13 @@ async function clean() {
     );
   }
 
-  const n = await prisma.news.deleteMany({
-    where: { slug: { in: NEWS.map((a) => a.slug) } },
-  });
-  const g = await prisma.guide.deleteMany({
-    where: { slug: { in: GUIDES.map((a) => a.slug) } },
-  });
-  const o = await prisma.opinion.deleteMany({
-    where: { slug: { in: OPINIONS.map((a) => a.slug) } },
+  // Uchala tur bitta jadvalda — bitta o'chirish yetarli.
+  const removed = await prisma.post.deleteMany({
+    where: {
+      slug: {
+        in: [...NEWS, ...GUIDES, ...OPINIONS].map((a) => a.slug),
+      },
+    },
   });
   const u = await prisma.user.deleteMany({
     where: { email: { in: DEMO_USERS.map((x) => x.email) } },
@@ -482,11 +473,7 @@ async function clean() {
     "O'chirildi: " +
       c.count +
       " izoh, " +
-      n.count +
-      " yangilik, " +
-      g.count +
-      " qo'llanma, " +
-      o.count +
+      removed.count +
       " maqola, " +
       u.count +
       " demo foydalanuvchi"
@@ -593,33 +580,33 @@ async function main() {
     data: [
       {
         ...byUser(0),
-        newsId: news[0].id,
+        postId: news[0].id,
         content:
           "Reyd mexanikasi juda yoqdi, lekin uchinchi bosqich guruhsiz o'ynaganda haddan tashqari og'ir.",
         status: CommentStatus.APPROVED,
       },
       {
         ...byUser(1),
-        newsId: news[0].id,
+        postId: news[0].id,
         content: "Yasash tizimi qayta qurilgani eng katta yangilik. Nihoyat.",
         status: CommentStatus.APPROVED,
       },
       {
         ...byUser(2),
-        newsId: news[1].id,
+        postId: news[1].id,
         content: "Saralash bosqichiga qanday ro'yxatdan o'tsa bo'ladi?",
         status: CommentStatus.APPROVED,
       },
       {
         authorName: "Mehmon",
         authorEmail: "mehmon@example.com",
-        newsId: news[1].id,
+        postId: news[1].id,
         content: "Chiptalar narxi qachon e'lon qilinadi?",
         status: CommentStatus.PENDING,
       },
       {
         ...byUser(0),
-        guideId: guides[1].id,
+        postId: guides[1].id,
         content:
           "Kuniga 3 ta o'yin qoidasini sinab ko'rdim — bir oyda sezilarli farq bo'ldi.",
         status: CommentStatus.APPROVED,
@@ -627,13 +614,13 @@ async function main() {
       {
         authorName: "Anon",
         authorEmail: "anon@example.com",
-        guideId: guides[2].id,
+        postId: guides[2].id,
         content: "arzon qismlar http://spam.example.com bu yerda",
         status: CommentStatus.REJECTED,
       },
       {
         ...byUser(1),
-        opinionId: opinions[0].id,
+        postId: opinions[0].id,
         content:
           "Yo'l xaritasi bor yoki yo'qligi — eng to'g'ri mezon. Shu bo'yicha xarid qilaman.",
         status: CommentStatus.APPROVED,
@@ -641,7 +628,7 @@ async function main() {
       {
         authorName: "O'quvchi",
         authorEmail: "oquvchi@example.com",
-        opinionId: opinions[1].id,
+        postId: opinions[1].id,
         content: "Qoidalarni kim yozadi degan savol juda o'rinli qo'yilgan.",
         status: CommentStatus.PENDING,
       },
@@ -655,16 +642,16 @@ async function main() {
   });
   await prisma.like.createMany({
     data: [
-      { userId: users[0].id, newsId: news[0].id },
-      { userId: users[1].id, newsId: news[0].id },
-      { userId: users[2].id, newsId: news[0].id },
-      { userId: users[0].id, newsId: news[1].id },
-      { userId: users[1].id, newsId: news[2].id },
-      { userId: users[0].id, guideId: guides[0].id },
-      { userId: users[1].id, guideId: guides[1].id },
-      { userId: users[2].id, guideId: guides[1].id },
-      { userId: users[0].id, opinionId: opinions[0].id },
-      { userId: users[2].id, opinionId: opinions[1].id },
+      { userId: users[0].id, postId: news[0].id },
+      { userId: users[1].id, postId: news[0].id },
+      { userId: users[2].id, postId: news[0].id },
+      { userId: users[0].id, postId: news[1].id },
+      { userId: users[1].id, postId: news[2].id },
+      { userId: users[0].id, postId: guides[0].id },
+      { userId: users[1].id, postId: guides[1].id },
+      { userId: users[2].id, postId: guides[1].id },
+      { userId: users[0].id, postId: opinions[0].id },
+      { userId: users[2].id, postId: opinions[1].id },
     ],
     skipDuplicates: true,
   });

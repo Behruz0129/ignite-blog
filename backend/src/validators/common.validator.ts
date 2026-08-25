@@ -19,6 +19,11 @@ export const listQuerySchema = z.object({
   tag: z.string().trim().optional(), // tag slug bo'yicha filter
 });
 
+/** Aralash ro'yxat uchun: `listQuerySchema` + ixtiyoriy tur filtri. */
+export const postListQuerySchema = listQuerySchema.extend({
+  type: z.enum(["NEWS", "GUIDE", "OPINION"]).optional(),
+});
+
 // URL'dagi :id parametri uchun
 export const idParamSchema = z.object({
   id: z.string().min(1, "id majburiy"),

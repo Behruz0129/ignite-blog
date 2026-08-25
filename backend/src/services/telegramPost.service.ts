@@ -20,15 +20,16 @@ import { logger } from "../config/logger";
 
 /** Kontent turi → saytdagi yo'l va xabardagi belgi. */
 const KIND = {
-  news: { path: "news", label: "Yangilik", emoji: "📰" },
-  guide: { path: "guides", label: "Qo'llanma", emoji: "🎮" },
-  opinion: { path: "opinions", label: "Maqola", emoji: "✍️" },
+  NEWS: { path: "news", label: "Yangilik", emoji: "📰" },
+  GUIDE: { path: "guides", label: "Qo'llanma", emoji: "🎮" },
+  OPINION: { path: "opinions", label: "Maqola", emoji: "✍️" },
 } as const;
 
 export type ContentKind = keyof typeof KIND;
 
 interface PostableContent {
   id: string;
+  type: ContentKind;
   title: string;
   slug: string;
   excerpt?: string | null;
@@ -56,8 +57,8 @@ export function toHashtag(name: string): string {
   return clean ? `#${clean}` : "";
 }
 
-export function buildMessage(kind: ContentKind, item: PostableContent): string {
-  const meta = KIND[kind];
+export function buildMessage(item: PostableContent): string {
+  const meta = KIND[item.type];
   const url = `${frontendUrl}/${meta.path}/${item.slug}`;
 
   const tags = [...(item.categories ?? []), ...(item.tags ?? [])]
@@ -98,11 +99,11 @@ export const telegramPostService = {
    * Maqolani kanalga yuboradi. Chaqiruvchi natijani kutmasligi mumkin.
    * Yuborilgani bazaga belgilanadi, shuning uchun takror yuborilmaydi.
    */
-  async publish(kind: ContentKind, item: PostableContent): Promise<boolean> {
+  async publish(item: PostableContent): Promise<boolean> {
     if (!isTelegramChannelConfigured) return false;
     if (item.telegramPostedAt) return false; // allaqachon yuborilgan
 
-    const text = buildMessage(kind, item);
+    const text = buildMessage(item);
     const chatId = env.TELEGRAM_CHANNEL_ID as string;
 
     try {
@@ -123,8 +124,7 @@ export const telegramPostService = {
         });
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (prisma as any)[kind].update({
+      await prisma.post.update({
         where: { id: item.id },
         data: { telegramPostedAt: new Date() },
       });

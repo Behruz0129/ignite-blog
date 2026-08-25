@@ -8,6 +8,7 @@
 import { Router } from "express";
 import authRoutes from "./auth.routes";
 import dashboardRoutes from "./dashboard.routes";
+import postsRoutes from "./posts.routes";
 import newsRoutes from "./news.routes";
 import guidesRoutes from "./guides.routes";
 import opinionsRoutes from "./opinions.routes";
@@ -27,6 +28,8 @@ router.get("/health", (_req, res) => {
 
 router.use("/auth", authRoutes);
 router.use("/dashboard", dashboardRoutes);
+// Aralash oqim (barcha turlar) — saytdagi "Barchasi" bo'limi uchun
+router.use("/posts", postsRoutes);
 router.use("/news", newsRoutes);
 router.use("/guides", guidesRoutes);
 router.use("/opinions", opinionsRoutes);
