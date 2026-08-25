@@ -3,21 +3,42 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, buildQuery } from "@/lib/api";
 import type { Comment, PaginationMeta } from "@/lib/types";
+import { commentAuthor, commentEmail, formatDateTime, initial } from "@/lib/format";
+import Icon from "@/components/Icon";
+import { useToast } from "@/components/Toast";
+
+const FILTERS = [
+  { value: "", label: "Barchasi" },
+  { value: "PENDING", label: "Kutmoqda" },
+  { value: "APPROVED", label: "Tasdiqlangan" },
+  { value: "REJECTED", label: "Rad etilgan" },
+];
 
 const STATUS_LABEL: Record<string, string> = {
-  PENDING: "Kutilmoqda",
+  PENDING: "Kutmoqda",
   APPROVED: "Tasdiqlangan",
   REJECTED: "Rad etilgan",
 };
 
+function statusClass(status: string) {
+  if (status === "APPROVED") return "pill-ok";
+  if (status === "REJECTED") return "pill-danger";
+  return "pill-warn";
+}
+
 export default function CommentsPage() {
+  const toast = useToast();
   const [items, setItems] = useState<Comment[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
     try {
       const q = buildQuery({ page, limit: 15, status });
       const res = await api.get<Comment[]>(`/comments${q}`);
@@ -25,6 +46,8 @@ export default function CommentsPage() {
       setMeta(res.meta || null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Xatolik");
+    } finally {
+      setLoading(false);
     }
   }, [page, status]);
 
@@ -33,132 +56,194 @@ export default function CommentsPage() {
   }, [load]);
 
   async function act(id: string, action: "approve" | "reject") {
+    setBusyId(id);
     try {
       await api.patch(`/comments/${id}/${action}`);
+      toast.success(action === "approve" ? "Tasdiqlandi" : "Rad etildi");
       load();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : "Xatolik");
+    } finally {
+      setBusyId(null);
     }
   }
 
   async function remove(id: string) {
-    if (!confirm("Izoh o'chirilsinmi?")) return;
+    if (!confirm("Izoh butunlay o'chirilsinmi?")) return;
+    setBusyId(id);
     try {
       await api.delete(`/comments/${id}`);
+      toast.success("O'chirildi");
       load();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : "Xatolik");
+    } finally {
+      setBusyId(null);
     }
   }
 
-  function targetTitle(c: Comment) {
-    return c.news?.title || c.guide?.title || c.opinion?.title || "—";
+  function target(c: Comment) {
+    if (c.news) return { label: c.news.title, icon: "news" as const };
+    if (c.guide) return { label: c.guide.title, icon: "guide" as const };
+    if (c.opinion) return { label: c.opinion.title, icon: "opinion" as const };
+    return null;
   }
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-slate-900">Izohlar</h1>
-
-      <div className="mb-4">
-        <select
-          value={status}
-          onChange={(e) => {
-            setPage(1);
-            setStatus(e.target.value);
-          }}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand"
-        >
-          <option value="">Barchasi</option>
-          <option value="PENDING">Kutilmoqda</option>
-          <option value="APPROVED">Tasdiqlangan</option>
-          <option value="REJECTED">Rad etilgan</option>
-        </select>
+      <div className="mb-6">
+        <h2 className="page-title">Izohlar</h2>
+        <p className="page-sub">
+          {meta ? `Jami ${meta.total} ta izoh` : "Yuklanmoqda…"}
+        </p>
       </div>
 
-      {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+      {/* Filtr */}
+      <div className="mb-4 inline-flex flex-wrap rounded-lg border border-line bg-paper p-0.5">
+        {FILTERS.map((f) => (
+          <button
+            key={f.value}
+            onClick={() => {
+              setPage(1);
+              setStatus(f.value);
+            }}
+            className={`rounded-md px-3 py-1.5 text-[13px] font-medium transition ${
+              status === f.value
+                ? "bg-brand-soft text-brand"
+                : "text-ink-soft hover:text-ink"
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
 
-      <div className="space-y-3">
-        {items.length === 0 ? (
-          <p className="text-slate-500">Izoh yo'q.</p>
-        ) : (
-          items.map((c) => (
-            <div key={c.id} className="rounded-xl bg-white p-4 shadow-sm">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-slate-900">
-                      {c.authorName}
-                    </span>
-                    <span className="text-xs text-slate-400">
-                      {c.authorEmail}
-                    </span>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs ${
-                        c.status === "APPROVED"
-                          ? "bg-green-100 text-green-700"
-                          : c.status === "REJECTED"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-amber-100 text-amber-700"
-                      }`}
-                    >
-                      {STATUS_LABEL[c.status]}
-                    </span>
+      {error && (
+        <div className="mb-4 flex items-start gap-2 rounded-lg border border-danger/20 bg-danger-soft px-4 py-3 text-sm text-danger">
+          <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex items-center gap-2 py-16 text-sm text-ink-faint">
+          <Icon name="spinner" className="h-4 w-4 animate-spin" />
+          Yuklanmoqda…
+        </div>
+      ) : items.length === 0 ? (
+        <div className="card empty-state">
+          <Icon name="comment" className="h-7 w-7 text-ink-faint" />
+          <p className="text-sm font-medium text-ink">Izoh yo&apos;q</p>
+          <p className="text-sm text-ink-soft">
+            {status
+              ? "Bu holatda izoh topilmadi."
+              : "O'quvchilar izoh qoldirganda shu yerda ko'rinadi."}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {items.map((c) => {
+            const name = commentAuthor(c);
+            const email = commentEmail(c);
+            const t = target(c);
+            const busy = busyId === c.id;
+
+            return (
+              <div
+                key={c.id}
+                className={`card card-pad transition ${busy ? "opacity-50" : ""}`}
+              >
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-canvas text-sm font-semibold text-ink-soft">
+                    {initial(name)}
+                  </span>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium text-ink">{name}</span>
+                      {email && (
+                        <span className="text-xs text-ink-faint">{email}</span>
+                      )}
+                      {!c.user && <span className="pill-muted">mehmon</span>}
+                      <span className={statusClass(c.status)}>
+                        {STATUS_LABEL[c.status]}
+                      </span>
+                    </div>
+
+                    <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-ink">
+                      {c.content}
+                    </p>
+
+                    <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-faint">
+                      {t && (
+                        <span className="inline-flex items-center gap-1.5">
+                          <Icon name={t.icon} className="h-3.5 w-3.5" />
+                          <span className="max-w-[22rem] truncate">{t.label}</span>
+                        </span>
+                      )}
+                      <span>·</span>
+                      <span>{formatDateTime(c.createdAt)}</span>
+                    </div>
                   </div>
-                  <p className="mt-1 text-slate-700">{c.content}</p>
-                  <p className="mt-1 text-xs text-slate-400">
-                    {targetTitle(c)} •{" "}
-                    {new Date(c.createdAt).toLocaleString("uz")}
-                  </p>
-                </div>
-                <div className="flex shrink-0 gap-2">
-                  {c.status !== "APPROVED" && (
+
+                  <div className="flex shrink-0 flex-wrap gap-2">
+                    {c.status !== "APPROVED" && (
+                      <button
+                        onClick={() => act(c.id, "approve")}
+                        disabled={busy}
+                        className="btn-secondary btn-sm text-ok"
+                      >
+                        <Icon name="check" className="h-4 w-4" />
+                        Tasdiqlash
+                      </button>
+                    )}
+                    {c.status !== "REJECTED" && (
+                      <button
+                        onClick={() => act(c.id, "reject")}
+                        disabled={busy}
+                        className="btn-secondary btn-sm text-warn"
+                      >
+                        <Icon name="close" className="h-4 w-4" />
+                        Rad etish
+                      </button>
+                    )}
                     <button
-                      onClick={() => act(c.id, "approve")}
-                      className="rounded bg-green-50 px-3 py-1 text-xs text-green-600 hover:bg-green-100"
+                      onClick={() => remove(c.id)}
+                      disabled={busy}
+                      title="O'chirish"
+                      className="btn-icon hover:bg-danger-soft hover:text-danger"
                     >
-                      Tasdiqlash
+                      <Icon name="trash" className="h-[18px] w-[18px]" />
                     </button>
-                  )}
-                  {c.status !== "REJECTED" && (
-                    <button
-                      onClick={() => act(c.id, "reject")}
-                      className="rounded bg-amber-50 px-3 py-1 text-xs text-amber-700 hover:bg-amber-100"
-                    >
-                      Rad etish
-                    </button>
-                  )}
-                  <button
-                    onClick={() => remove(c.id)}
-                    className="rounded bg-red-50 px-3 py-1 text-xs text-red-600 hover:bg-red-100"
-                  >
-                    O'chir
-                  </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
-        )}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {meta && meta.totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between text-sm">
-          <span className="text-slate-500">
-            Jami: {meta.total} • Sahifa {meta.page}/{meta.totalPages}
+        <div className="mt-4 flex items-center justify-between gap-3 text-sm">
+          <span className="text-ink-soft">
+            Sahifa {meta.page} / {meta.totalPages}
           </span>
           <div className="flex gap-2">
             <button
               disabled={!meta.hasPrevPage}
               onClick={() => setPage((p) => p - 1)}
-              className="rounded-lg bg-white px-3 py-1.5 shadow-sm disabled:opacity-40"
+              className="btn-secondary btn-sm"
             >
-              ← Oldingi
+              <Icon name="chevronLeft" className="h-4 w-4" />
+              Oldingi
             </button>
             <button
               disabled={!meta.hasNextPage}
               onClick={() => setPage((p) => p + 1)}
-              className="rounded-lg bg-white px-3 py-1.5 shadow-sm disabled:opacity-40"
+              className="btn-secondary btn-sm"
             >
-              Keyingi →
+              Keyingi
+              <Icon name="chevronRight" className="h-4 w-4" />
             </button>
           </div>
         </div>

@@ -13,6 +13,9 @@ out/
 .env.*.local
 **/.env
 **/.env.local
+# zaxira nusxalari ham sir saqlaydi (.env.bak, .env.local.bak ...)
+*.bak
+**/.env*.bak
 
 # logs
 logs/
@@ -26,3 +29,6 @@ Thumbs.db
 # editor
 .vscode/
 .idea/
+
+# TypeScript build cache
+*.tsbuildinfo

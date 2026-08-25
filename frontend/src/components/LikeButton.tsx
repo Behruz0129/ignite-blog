@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
 import { authPost } from "@/lib/auth-client";
 import type { ContentType } from "@/lib/types";
@@ -28,6 +28,7 @@ export default function LikeButton({
   compact = false,
 }: Props) {
   const { user } = useAuth();
+  const router = useRouter();
   const [liked, setLiked] = useState(initialLiked);
   const [count, setCount] = useState(initialCount);
   const [loading, setLoading] = useState(false);
@@ -50,17 +51,22 @@ export default function LikeButton({
     }
   }
 
+  // Kirmagan foydalanuvchi: <Link> EMAS, <button>.
+  // Bu komponent maqola kartochkasi ichida turadi, kartochkaning o'zi esa
+  // <a> — <a> ichida <a> yaroqsiz HTML va hydration xatosini beradi.
   if (!user) {
     return (
-      <Link
-        href="/login"
+      <button
+        type="button"
+        onClick={() => router.push("/login")}
         className={`inline-flex items-center gap-1.5 text-ink-soft transition hover:text-ink ${
           compact ? "text-[12px]" : "text-sm"
         }`}
+        aria-label="Like bosish uchun kiring"
       >
         <span>{liked ? "♥" : "♡"}</span>
         <span>{count}</span>
-      </Link>
+      </button>
     );
   }
 

@@ -31,8 +31,18 @@ services:
         generateValue: true # Render tasodifiy qiymat yaratadi
       - key: JWT_EXPIRES_IN
         value: 7d
+      # Ruxsat etilgan originlar, vergul bilan. Masalan:
+      # https://ignite.uz,https://www.ignite.uz,https://admin.ignite.uz
       - key: CORS_ORIGIN
-        sync: false # Vercel admin manzili (deploydan keyin kiritiladi)
+        sync: false
+      # Ommaviy sayt manzili: email havolalari (parol tiklash, tasdiqlash) va
+      # OAuth'dan keyingi qaytish shu yerga ishora qiladi.
+      - key: FRONTEND_URL
+        sync: false # masalan: https://ignite.uz
+      # Backend'ning o'z ommaviy manzili — Google/Discord callback shundan
+      # quriladi. Noto'g'ri bo'lsa OAuth "redirect_uri_mismatch" beradi.
+      - key: OAUTH_CALLBACK_BASE
+        sync: false # masalan: https://api.ignite.uz
       - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_API_KEY

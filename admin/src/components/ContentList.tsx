@@ -5,21 +5,42 @@ import Link from "next/link";
 import { api, buildQuery } from "@/lib/api";
 import type { ContentConfig } from "@/lib/contentConfig";
 import type { ContentItem, PaginationMeta } from "@/lib/types";
+import { formatDateShort } from "@/lib/format";
+import Icon from "./Icon";
+import { useToast } from "./Toast";
+
+const FILTERS = [
+  { value: "", label: "Barchasi" },
+  { value: "PUBLISHED", label: "Chop etilgan" },
+  { value: "DRAFT", label: "Qoralama" },
+];
 
 export default function ContentList({ config }: { config: ContentConfig }) {
+  const toast = useToast();
   const [items, setItems] = useState<ContentItem[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [search, setSearch] = useState("");
+  const [debounced, setDebounced] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  // Har harfda so'rov yubormaslik uchun qidiruvni kechiktiramiz
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setPage(1);
+      setDebounced(search);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const q = buildQuery({ page, limit: 10, search, status });
+      const q = buildQuery({ page, limit: 10, search: debounced, status });
       const res = await api.get<ContentItem[]>(
         `${config.apiPath}/admin/all${q}`
       );
@@ -30,7 +51,7 @@ export default function ContentList({ config }: { config: ContentConfig }) {
     } finally {
       setLoading(false);
     }
-  }, [config.apiPath, page, search, status]);
+  }, [config.apiPath, page, debounced, status]);
 
   useEffect(() => {
     load();
@@ -38,134 +59,199 @@ export default function ContentList({ config }: { config: ContentConfig }) {
 
   async function togglePublish(item: ContentItem) {
     const action = item.status === "PUBLISHED" ? "unpublish" : "publish";
+    setBusyId(item.id);
     try {
       await api.patch(`${config.apiPath}/${item.id}/${action}`);
+      toast.success(
+        action === "publish" ? "Chop etildi" : "Saytdan yashirildi"
+      );
       load();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : "Xatolik");
+    } finally {
+      setBusyId(null);
     }
   }
 
   async function remove(item: ContentItem) {
-    if (!confirm(`"${item.title}" o'chirilsinmi?`)) return;
+    if (!confirm(`"${item.title}" butunlay o'chirilsinmi?`)) return;
+    setBusyId(item.id);
     try {
       await api.delete(`${config.apiPath}/${item.id}`);
+      toast.success("O'chirildi");
       load();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Xatolik");
+      toast.error(e instanceof Error ? e.message : "Xatolik");
+    } finally {
+      setBusyId(null);
     }
   }
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">{config.title}</h1>
-        <Link
-          href={`/${config.type}/new`}
-          className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark"
-        >
-          + Yangi {config.singular}
+      {/* Sarlavha */}
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="page-title">{config.title}</h2>
+          <p className="page-sub">
+            {meta ? `Jami ${meta.total} ta yozuv` : "Yuklanmoqda…"}
+          </p>
+        </div>
+        <Link href={`/${config.type}/new`} className="btn-primary">
+          <Icon name="plus" className="h-4 w-4" />
+          Yangi {config.singular}
         </Link>
       </div>
 
       {/* Filtrlar */}
-      <div className="mb-4 flex flex-wrap gap-3">
-        <input
-          value={search}
-          onChange={(e) => {
-            setPage(1);
-            setSearch(e.target.value);
-          }}
-          placeholder="Qidirish..."
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand"
-        />
-        <select
-          value={status}
-          onChange={(e) => {
-            setPage(1);
-            setStatus(e.target.value);
-          }}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand"
-        >
-          <option value="">Barchasi</option>
-          <option value="PUBLISHED">Chop etilgan</option>
-          <option value="DRAFT">Qoralama</option>
-        </select>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="relative min-w-[220px] flex-1 sm:max-w-xs">
+          <Icon
+            name="search"
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint"
+          />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Sarlavha bo'yicha qidirish…"
+            className="input pl-9"
+          />
+        </div>
+
+        {/* Segment tugmalari — select'dan tezroq */}
+        <div className="inline-flex rounded-lg border border-line bg-paper p-0.5">
+          {FILTERS.map((f) => (
+            <button
+              key={f.value}
+              onClick={() => {
+                setPage(1);
+                setStatus(f.value);
+              }}
+              className={`rounded-md px-3 py-1.5 text-[13px] font-medium transition ${
+                status === f.value
+                  ? "bg-brand-soft text-brand"
+                  : "text-ink-soft hover:text-ink"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+      {error && (
+        <div className="mb-4 flex items-start gap-2 rounded-lg border border-danger/20 bg-danger-soft px-4 py-3 text-sm text-danger">
+          <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
 
-      <div className="overflow-hidden rounded-xl bg-white shadow-sm">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left text-slate-500">
+      <div className="table-wrap">
+        <table className="table">
+          <thead>
             <tr>
-              <th className="px-5 py-3">Sarlavha</th>
-              <th className="px-5 py-3">Holat</th>
-              <th className="px-5 py-3">Izohlar</th>
-              <th className="px-5 py-3">Sana</th>
-              <th className="px-5 py-3 text-right">Amallar</th>
+              <th>Sarlavha</th>
+              <th className="w-36">Holat</th>
+              <th className="w-24">Izohlar</th>
+              <th className="w-32">Sana</th>
+              <th className="w-44 text-right">Amallar</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="px-5 py-8 text-center text-slate-400">
-                  Yuklanmoqda...
+                <td colSpan={5}>
+                  <div className="flex items-center justify-center gap-2 py-10 text-sm text-ink-faint">
+                    <Icon name="spinner" className="h-4 w-4 animate-spin" />
+                    Yuklanmoqda…
+                  </div>
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-5 py-8 text-center text-slate-400">
-                  Hech narsa topilmadi.
+                <td colSpan={5}>
+                  <div className="empty-state">
+                    <Icon name="news" className="h-7 w-7 text-ink-faint" />
+                    <p className="text-sm font-medium text-ink">
+                      {debounced || status
+                        ? "Mos yozuv topilmadi"
+                        : `Hali ${config.singular} yo'q`}
+                    </p>
+                    <p className="text-sm text-ink-soft">
+                      {debounced || status
+                        ? "Qidiruv yoki filtrni o'zgartiring."
+                        : "Birinchi yozuvni qo'shib ko'ring."}
+                    </p>
+                    {!debounced && !status && (
+                      <Link
+                        href={`/${config.type}/new`}
+                        className="btn-primary btn-sm mt-2"
+                      >
+                        <Icon name="plus" className="h-4 w-4" />
+                        Yangi {config.singular}
+                      </Link>
+                    )}
+                  </div>
                 </td>
               </tr>
             ) : (
               items.map((item) => (
-                <tr key={item.id} className="border-t border-slate-100">
-                  <td className="px-5 py-3">
-                    <div className="font-medium text-slate-900">
+                <tr key={item.id} className={busyId === item.id ? "opacity-50" : ""}>
+                  <td>
+                    <Link
+                      href={`/${config.type}/${item.id}`}
+                      className="block font-medium text-ink hover:text-brand"
+                    >
                       {item.title}
-                    </div>
-                    <div className="font-mono text-xs text-slate-400">
+                    </Link>
+                    <span className="mt-0.5 block font-mono text-xs text-ink-faint">
                       /{item.slug}
-                    </div>
+                    </span>
                   </td>
-                  <td className="px-5 py-3">
+                  <td>
                     <span
-                      className={`rounded-full px-2 py-0.5 text-xs ${
-                        item.status === "PUBLISHED"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-amber-100 text-amber-700"
-                      }`}
+                      className={
+                        item.status === "PUBLISHED" ? "pill-ok" : "pill-warn"
+                      }
                     >
                       {item.status === "PUBLISHED" ? "Chop etilgan" : "Qoralama"}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-slate-600">
-                    {item._count?.comments ?? 0}
+                  <td className="text-ink-soft">{item._count?.comments ?? 0}</td>
+                  <td className="text-ink-soft">
+                    {formatDateShort(item.createdAt)}
                   </td>
-                  <td className="px-5 py-3 text-slate-500">
-                    {new Date(item.createdAt).toLocaleDateString("uz")}
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="flex justify-end gap-2">
+                  <td>
+                    <div className="flex justify-end gap-1">
                       <button
                         onClick={() => togglePublish(item)}
-                        className="rounded bg-slate-100 px-2 py-1 text-xs hover:bg-slate-200"
+                        disabled={busyId === item.id}
+                        title={
+                          item.status === "PUBLISHED"
+                            ? "Saytdan yashirish"
+                            : "Saytda chop etish"
+                        }
+                        className="btn-icon"
                       >
-                        {item.status === "PUBLISHED" ? "Yashirish" : "Chop etish"}
+                        <Icon
+                          name={item.status === "PUBLISHED" ? "eyeOff" : "eye"}
+                          className="h-[18px] w-[18px]"
+                        />
                       </button>
                       <Link
                         href={`/${config.type}/${item.id}`}
-                        className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-600 hover:bg-blue-100"
+                        title="Tahrirlash"
+                        className="btn-icon"
                       >
-                        Tahrir
+                        <Icon name="pencil" className="h-[18px] w-[18px]" />
                       </Link>
                       <button
                         onClick={() => remove(item)}
-                        className="rounded bg-red-50 px-2 py-1 text-xs text-red-600 hover:bg-red-100"
+                        disabled={busyId === item.id}
+                        title="O'chirish"
+                        className="btn-icon hover:bg-danger-soft hover:text-danger"
                       >
-                        O'chir
+                        <Icon name="trash" className="h-[18px] w-[18px]" />
                       </button>
                     </div>
                   </td>
@@ -176,26 +262,27 @@ export default function ContentList({ config }: { config: ContentConfig }) {
         </table>
       </div>
 
-      {/* Pagination */}
       {meta && meta.totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between text-sm">
-          <span className="text-slate-500">
-            Jami: {meta.total} ta • Sahifa {meta.page}/{meta.totalPages}
+        <div className="mt-4 flex items-center justify-between gap-3 text-sm">
+          <span className="text-ink-soft">
+            Sahifa {meta.page} / {meta.totalPages}
           </span>
           <div className="flex gap-2">
             <button
               disabled={!meta.hasPrevPage}
               onClick={() => setPage((p) => p - 1)}
-              className="rounded-lg bg-white px-3 py-1.5 shadow-sm disabled:opacity-40"
+              className="btn-secondary btn-sm"
             >
-              ← Oldingi
+              <Icon name="chevronLeft" className="h-4 w-4" />
+              Oldingi
             </button>
             <button
               disabled={!meta.hasNextPage}
               onClick={() => setPage((p) => p + 1)}
-              className="rounded-lg bg-white px-3 py-1.5 shadow-sm disabled:opacity-40"
+              className="btn-secondary btn-sm"
             >
-              Keyingi →
+              Keyingi
+              <Icon name="chevronRight" className="h-4 w-4" />
             </button>
           </div>
         </div>

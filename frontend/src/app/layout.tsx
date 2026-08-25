@@ -40,7 +40,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="uz" className={inter.variable}>
-      <body className="flex min-h-screen flex-col">
+      {/* suppressHydrationWarning: brauzer kengaytmalari (ColorZilla, Grammarly ...)
+          <body> ga o'z atributlarini qo'shadi va hydration mismatch beradi.
+          Bu bayroq faqat shu elementning o'z atributlariga ta'sir qiladi —
+          ichkaridagi haqiqiy nomuvofiqliklar baribir ko'rinadi. */}
+      <body className="flex min-h-screen flex-col" suppressHydrationWarning>
         <AuthProvider>
           <Header />
           <main className="flex-1">{children}</main>

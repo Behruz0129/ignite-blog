@@ -1,14 +1,50 @@
 import type { ContentType } from "./types";
 
-// Sana formatlash (o'zbekcha)
+// Oy nomlari qo'lda yozilgan: brauzerlarda "uz-UZ" uchun to'liq oy nomi
+// ko'pincha yo'q va Intl "2026 M08 25" kabi natija qaytaradi. Serverdagi
+// Node esa to'liq ICU bilan "25-avgust, 2026" beradi — bir xil komponent
+// ikki xil chiqib, hydration xatosini keltirib chiqaradi.
+const OYLAR = [
+  "yanvar",
+  "fevral",
+  "mart",
+  "aprel",
+  "may",
+  "iyun",
+  "iyul",
+  "avgust",
+  "sentabr",
+  "oktabr",
+  "noyabr",
+  "dekabr",
+];
+
+// Sana qismlarini QAT'IY Asia/Tashkent mintaqasida ajratamiz.
+// Raqamli format hamma joyda bir xil ishlaydi, shuning uchun server UTC'da
+// tursa ham natija o'zgarmaydi.
+const partsFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Asia/Tashkent",
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+});
+
+// Sana formatlash (o'zbekcha): 25-avgust, 2026
 export function formatDate(dateStr?: string | null): string {
   if (!dateStr) return "";
   const d = new Date(dateStr);
-  return d.toLocaleDateString("uz-UZ", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  if (Number.isNaN(d.getTime())) return "";
+
+  const parts = partsFormatter.formatToParts(d);
+  const get = (type: string) =>
+    parts.find((p) => p.type === type)?.value ?? "";
+
+  const day = Number(get("day"));
+  const month = Number(get("month"));
+  const year = get("year");
+  if (!day || !month || !year) return "";
+
+  return `${day}-${OYLAR[month - 1]}, ${year}`;
 }
 
 // HTML'dan taxminiy o'qish vaqti (daqiqa)
