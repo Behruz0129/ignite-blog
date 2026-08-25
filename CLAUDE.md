@@ -65,6 +65,13 @@ access+refresh rotatsiya bilan. Admin client tokenni avtomatik yangilaydi
 **Til:** butun UI va izohlar o'zbekcha, **faqat lotin alifbosida** — kirill
 harflari aralashmasin.
 
+**Kirish faqat Telegram (va sozlansa Google/Discord) orqali.** Email bilan
+ro'yxatdan o'tish ataylab yo'q — email tasdiqlash uchun tashqi xizmat saqlab
+turish shart bo'lmasin. `/auth/login` esa qoladi: seed orqali yaratilgan
+adminlar shu yo'l bilan kiradi. Admin parolini unutilsa — Render'da
+`ADMIN_PASSWORD` ni o'zgartirib qayta deploy qilinadi (seed parolni
+yangilaydi).
+
 **`CORS_ORIGIN` prodda to'ldirilgan bo'lishi shart.** Uning default qiymati
 `http://localhost:3000` — o'rnatilmasa, brauzerdan keladigan hamma so'rov
 (kirish, ro'yxatdan o'tish, like, izoh) rad etiladi, lekin SSR bilan
@@ -102,10 +109,9 @@ Bular hali hal qilinmagan — navbatdagi sessiya shu ro'yxatdan davom etsin.
    - `FRONTEND_URL` = `https://ignite-daily.vercel.app/` bo'lib turibdi —
      `https://ignite.uz` bo'lishi kerak. Email tasdiqlash, parol tiklash va
      OAuth qaytishi shu manzilga tayanadi.
-   - `RESEND_API_KEY` yaroqsiz ("API key is invalid") — shu sababli
-     ro'yxatdan o'tish umuman ishlamaydi (email ketmasa foydalanuvchi
-     yaratilmaydi). Resend'da domen tasdiqlangani va `EMAIL_FROM` o'sha
-     domenga tegishli ekani tekshirilsin.
+   - ~~`RESEND_API_KEY`~~ — **endi kerak emas**: email bilan ro'yxatdan
+     o'tish olib tashlandi (2026-08-26). Render'da bu o'zgaruvchi qolgan
+     bo'lsa, o'chirib tashlash mumkin.
    - Telegram Login Widget "Bot domain invalid" beradi — BotFather'da
      `/setdomain` → `ignite.uz` qilinmagan.
    - `TELEGRAM_CHANNEL_ID` hali qo'yilmagan — u bo'lmasa avtoposting o'chiq
@@ -221,3 +227,15 @@ Ikki qoida: yuborish xatosi chop etishni buzmaydi (log'ga yoziladi, `void`
 bilan chaqiriladi) va bir maqola bir marta yuboriladi (`telegramPostedAt`).
 Ulanish nuqtalari — `content.service.ts` dagi `create`, `update`, `setStatus`.
 Yoqish uchun `TELEGRAM_CHANNEL_ID` kerak; bo'lmasa jimgina o'chiq turadi.
+
+**2026-08-26 — email bilan ro'yxatdan o'tish olib tashlandi.**
+Kirish Telegram'ga soddalashtirildi. `register`, `verify-email`,
+`resend-verification`, `forgot-password`, `reset-password` endpointlari,
+`email.service.ts`, `resend` paketi, tegishli sahifalar va `users`
+jadvalidagi tasdiqlash/tiklash ustunlari o'chirildi. Saytdagi kirish
+sahifasida email/parol formasi "Admin sifatida kirish" ostida yashiringan.
+
+Diqqat: prodda Google va Discord **sozlanmagan** (`/api/auth/google` → 400),
+shuning uchun hozircha Telegram — yagona kirish yo'li. BotFather'da
+`/setdomain` qilinmasa saytdan hech kim kira olmaydi (adminlar bundan
+mustasno). Ikkinchi yo'l kerak bo'lsa — Google OAuth qo'shish eng oson.
