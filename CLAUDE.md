@@ -104,6 +104,8 @@ Bular hali hal qilinmagan — navbatdagi sessiya shu ro'yxatdan davom etsin.
    manzilida. Domen bersa, `OAUTH_CALLBACK_BASE` ni ham yangilash kerak.
 4. **Render free plan** — uyquga ketadi. Ommaviy sayt ISR bilan qutuladi,
    lekin adminkaga birinchi kirish sekin.
+5. **Bazada hali kontent yo'q** — ignite.uz "Hali kontent yo'q" holatini
+   ko'rsatadi. Tizim ishlayapti, faqat birinchi maqolalar kiritilmagan.
 
 ---
 
@@ -126,3 +128,13 @@ saqlaydi va `git add -A` bilan repoga tushib ketishi mumkin edi.
 
 Merge'dan keyin: backend typecheck + 37 test, admin build, frontend
 typecheck + build — hammasi toza.
+
+Merge'dan keyin `main`ga push qilindi (`26f3879`). Ikkala Vercel loyihasi ham
+shu commitdan qayta qurildi va **Ready**: adminka 31s, ommaviy sayt 24s.
+admin.ignite.uz endi yangi dizaynda ochiladi.
+
+Eslatma: `npm install` ikkala Next paketining `package-lock.json` faylidan
+Linux'ga xos yozuvlarni (`libc` maydonlari, `@emnapi/*` kabi optional
+paketlar) o'chirib yuboradi — Windows'da o'rnatilgani uchun. Bu o'zgarish
+commit qilinmadi va **bundan keyin ham qilinmasin**: Render va Vercel Linux'da
+build qiladi.
