@@ -43,8 +43,6 @@ const envSchema = z.object({
   TELEGRAM_BOT_USERNAME: z.string().optional(), // @sizsiz bot username (BotFather)
 
   // --- Email (Resend) ---
-  RESEND_API_KEY: z.string().optional(),
-  EMAIL_FROM: z.string().default("Ignite Blog <onboarding@resend.dev>"),
 
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),
@@ -137,4 +135,3 @@ export const isTelegramChannelConfigured = Boolean(
 export const isTelegramConfigured = Boolean(
   env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_BOT_USERNAME
 );
-export const isEmailConfigured = Boolean(env.RESEND_API_KEY);

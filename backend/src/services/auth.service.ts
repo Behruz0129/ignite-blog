@@ -1,5 +1,13 @@
 /**
  * AUTH SERVICE
+ * ------------
+ * Kirish yo'llari: Telegram Login Widget, Google/Discord OAuth (sozlansa) va
+ * email+parol (faqat seed orqali yaratilgan adminlar uchun).
+ *
+ * Email bilan RO'YXATDAN O'TISH ataylab olib tashlangan: auditoriya
+ * Telegram'da, bir bosishda kirish qulayroq, va email tasdiqlash uchun
+ * tashqi xizmat (Resend) saqlab turish shart emas. Shu sababli email
+ * tasdiqlash va parol tiklash oqimlari ham yo'q.
  */
 
 import bcrypt from "bcryptjs";
@@ -11,20 +19,8 @@ import {
   hashToken,
   refreshTokenExpiry,
 } from "../utils/token";
-import {
-  generateSecureToken,
-  // Diqqat: token.ts dagi hashToken bilan nomi bir xil, shuning uchun taxallus.
-  hashToken as hashSecureToken,
-  tokenExpiryHours,
-} from "../utils/secureToken";
-import { LoginInput, RegisterInput } from "../validators/auth.validator";
-import { emailService } from "./email.service";
-import {
-  verifyTelegramAuth,
-  sendTelegramMessage,
-  type TelegramAuthData,
-} from "./telegram.service";
-import { frontendUrl } from "../config/env";
+import { LoginInput } from "../validators/auth.validator";
+import { verifyTelegramAuth, type TelegramAuthData } from "./telegram.service";
 import { logger } from "../config/logger";
 import type { User } from "@prisma/client";
 
@@ -60,48 +56,6 @@ async function issueTokens(user: User) {
 }
 
 export const authService = {
-  async register(input: RegisterInput) {
-    const existing = await prisma.user.findUnique({
-      where: { email: input.email },
-    });
-    if (existing) {
-      throw AppError.badRequest("Bu email allaqachon ro'yxatdan o'tgan");
-    }
-
-    // Token foydalanuvchiga OCHIQ ko'rinishda ketadi (emaildagi havola),
-    // bazaga esa faqat uning sha256 hash'i yoziladi. Baza sizib chiqsa ham
-    // undan havolani tiklab bo'lmaydi — refresh token'da ham shu yondashuv.
-    const verificationToken = generateSecureToken();
-    const hashed = await bcrypt.hash(input.password, 10);
-
-    const user = await prisma.user.create({
-      data: {
-        name: input.name,
-        email: input.email,
-        password: hashed,
-        role: "USER",
-        provider: "LOCAL",
-        emailVerified: false,
-        emailVerificationToken: hashSecureToken(verificationToken),
-        emailVerificationExpires: tokenExpiryHours(24),
-      },
-    });
-
-    try {
-      await emailService.sendVerification(user.email, user.name, verificationToken);
-    } catch (err) {
-      // Email ketmasa user qolmasin — o'chiramiz va xatoni qaytaramiz
-      await prisma.user.delete({ where: { id: user.id } });
-      throw err;
-    }
-
-    return {
-      message:
-        "Ro'yxatdan o'tdingiz! Emailingizga tasdiqlash havolasi yuborildi. Emailni tasdiqlang, so'ng kiring.",
-      email: user.email,
-    };
-  },
-
   async login(input: LoginInput) {
     const user = await prisma.user.findUnique({
       where: { email: input.email },
@@ -129,121 +83,6 @@ export const authService = {
     }
 
     return issueTokens(user);
-  },
-
-  async verifyEmail(token: string) {
-    if (!token) throw AppError.badRequest("Token topilmadi");
-
-    const user = await prisma.user.findFirst({
-      where: {
-        // Bazada hash turadi, shuning uchun kelgan tokenni hash qilib qidiramiz
-        emailVerificationToken: hashSecureToken(token),
-        emailVerificationExpires: { gt: new Date() },
-      },
-    });
-
-    if (!user) {
-      throw AppError.badRequest("Token yaroqsiz yoki muddati tugagan");
-    }
-
-    const updated = await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        emailVerified: true,
-        emailVerificationToken: null,
-        emailVerificationExpires: null,
-      },
-    });
-
-    return issueTokens(updated);
-  },
-
-  async resendVerification(email: string) {
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      return { message: "Agar email ro'yxatdan o'tgan bo'lsa, tasdiqlash xabari yuborildi" };
-    }
-    if (user.emailVerified) {
-      throw AppError.badRequest("Email allaqachon tasdiqlangan");
-    }
-    if (user.provider !== "LOCAL") {
-      throw AppError.badRequest("Bu akkaunt email tasdiqlashni talab qilmaydi");
-    }
-
-    const verificationToken = generateSecureToken();
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        emailVerificationToken: hashSecureToken(verificationToken),
-        emailVerificationExpires: tokenExpiryHours(24),
-      },
-    });
-
-    await emailService.sendVerification(user.email, user.name, verificationToken);
-    return { message: "Tasdiqlash xabari qayta yuborildi" };
-  },
-
-  async forgotPassword(email: string) {
-    const user = await prisma.user.findUnique({ where: { email } });
-    const genericMsg =
-      "Agar email ro'yxatdan o'tgan bo'lsa, parol tiklash yo'riqnomasi yuborildi";
-
-    if (!user || !user.password) {
-      return { message: genericMsg };
-    }
-
-    const resetToken = generateSecureToken();
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        passwordResetToken: hashSecureToken(resetToken),
-        passwordResetExpires: tokenExpiryHours(1),
-      },
-    });
-
-    await emailService.sendPasswordReset(user.email, user.name, resetToken);
-
-    // Telegram bog'langan bo'lsa — bot orqali ham yuboramiz
-    if (user.telegramId) {
-      const link = `${frontendUrl}/reset-password?token=${resetToken}`;
-      await sendTelegramMessage(
-        user.telegramId,
-        `🔐 <b>Parolni tiklash</b>\n\nSalom, ${user.name}!\n\n<a href="${link}">Parolni tiklash</a>\n\nHavola 1 soat amal qiladi.`
-      );
-    }
-
-    return { message: genericMsg };
-  },
-
-  async resetPassword(token: string, password: string) {
-    const user = await prisma.user.findFirst({
-      where: {
-        passwordResetToken: hashSecureToken(token),
-        passwordResetExpires: { gt: new Date() },
-      },
-    });
-
-    if (!user) {
-      throw AppError.badRequest("Token yaroqsiz yoki muddati tugagan");
-    }
-
-    const hashed = await bcrypt.hash(password, 10);
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        password: hashed,
-        passwordResetToken: null,
-        passwordResetExpires: null,
-      },
-    });
-
-    // Barcha refresh token'larni bekor qilamiz
-    await prisma.refreshToken.updateMany({
-      where: { userId: user.id, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
-
-    return { message: "Parol muvaffaqiyatli yangilandi. Endi yangi parol bilan kiring." };
   },
 
   async telegramLogin(data: TelegramAuthData) {

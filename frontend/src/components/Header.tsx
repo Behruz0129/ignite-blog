@@ -59,17 +59,11 @@ export default function Header() {
                   </button>
                 </div>
               ) : (
-                <div className="flex items-center gap-3">
-                  <Link
-                    href="/login"
-                    className="text-[13px] text-ink-soft transition hover:text-ink"
-                  >
-                    Kirish
-                  </Link>
-                  <Link href="/register" className="btn-primary py-1.5 text-[12px]">
-                    Ro'yxatdan o'tish
-                  </Link>
-                </div>
+                // Ro'yxatdan o'tish alohida sahifa emas: Telegram bilan
+                // birinchi kirishning o'zi akkaunt ochadi.
+                <Link href="/login" className="btn-primary py-1.5 text-[12px]">
+                  Kirish
+                </Link>
               )}
             </>
           )}

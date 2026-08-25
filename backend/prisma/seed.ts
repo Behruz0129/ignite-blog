@@ -32,9 +32,25 @@ async function main() {
 
   const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
+  /**
+   * Parol tiklash oqimi olib tashlangan (email xizmati saqlanmaydi), shuning
+   * uchun admin parolini unutganda yagona yo'l — shu skript. `ADMIN_PASSWORD`
+   * berilgan bo'lsa parol HAR SAFAR shu qiymatga tenglashtiriladi; berilmasa
+   * mavjud parolga tegilmaydi.
+   *
+   * Diqqat: Render har deploy'da `npm run seed` ni ishga tushiradi, ya'ni
+   * muhitda `ADMIN_PASSWORD` turgan ekan, deploy'dan keyin admin paroli doim
+   * o'sha bo'ladi.
+   */
+  const resetPassword = Boolean(process.env.ADMIN_PASSWORD);
+
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },
-    update: { role: Role.SUPER_ADMIN, emailVerified: true }, // asosiy admin har doim SUPER_ADMIN
+    update: {
+      role: Role.SUPER_ADMIN, // asosiy admin har doim SUPER_ADMIN
+      emailVerified: true,
+      ...(resetPassword ? { password: hashedPassword } : {}),
+    },
     create: {
       name: adminName,
       email: adminEmail,
@@ -46,7 +62,11 @@ async function main() {
   });
 
   console.log(`✅  Admin tayyor: ${admin.email}`);
-  console.log(`    Parol (faqat birinchi yaratishda): ${adminPassword}`);
+  console.log(
+    resetPassword
+      ? "    Parol ADMIN_PASSWORD qiymatiga tenglashtirildi"
+      : "    Parolga tegilmadi (ADMIN_PASSWORD berilmagan)"
+  );
 
   // 2) Kategoriyalar
   const categories = ["PC O'yinlar", "Konsol", "Esports", "Mobil O'yinlar"];

@@ -6,7 +6,7 @@ import { Request, Response } from "express";
 import passport from "passport";
 import { asyncHandler } from "../utils/asyncHandler";
 import { authService } from "../services/auth.service";
-import { ok, created } from "../utils/apiResponse";
+import { ok } from "../utils/apiResponse";
 import { AppError } from "../utils/AppError";
 import {
   env,
@@ -14,7 +14,6 @@ import {
   isGoogleConfigured,
   isDiscordConfigured,
   isTelegramConfigured,
-  isEmailConfigured,
 } from "../config/env";
 import type { User as PrismaUser } from "@prisma/client";
 import { authCodeService } from "../services/authCode.service";
@@ -61,39 +60,13 @@ export const authController = {
   config: asyncHandler(async (_req: Request, res: Response) => {
     return ok(res, {
       telegramBotUsername: isTelegramConfigured ? env.TELEGRAM_BOT_USERNAME : null,
-      emailConfigured: isEmailConfigured,
       frontendUrl,
     });
-  }),
-
-  register: asyncHandler(async (req: Request, res: Response) => {
-    const result = await authService.register(req.body);
-    return created(res, result, result.message);
   }),
 
   login: asyncHandler(async (req: Request, res: Response) => {
     const result = await authService.login(req.body);
     return ok(res, result, "Muvaffaqiyatli kirildi");
-  }),
-
-  verifyEmail: asyncHandler(async (req: Request, res: Response) => {
-    const result = await authService.verifyEmail(req.body.token);
-    return ok(res, result, "Email tasdiqlandi");
-  }),
-
-  resendVerification: asyncHandler(async (req: Request, res: Response) => {
-    const result = await authService.resendVerification(req.body.email);
-    return ok(res, result, result.message);
-  }),
-
-  forgotPassword: asyncHandler(async (req: Request, res: Response) => {
-    const result = await authService.forgotPassword(req.body.email);
-    return ok(res, result, result.message);
-  }),
-
-  resetPassword: asyncHandler(async (req: Request, res: Response) => {
-    const result = await authService.resetPassword(req.body.token, req.body.password);
-    return ok(res, result, result.message);
   }),
 
   telegramLogin: asyncHandler(async (req: Request, res: Response) => {

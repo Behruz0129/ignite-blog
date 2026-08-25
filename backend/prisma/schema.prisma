@@ -63,11 +63,11 @@ model User {
   googleId  String?      @unique
   discordId String?      @unique
   telegramId String?     @unique
+  /// OAuth/Telegram orqali kelganlar uchun doim true. Email bilan ro'yxatdan
+  /// o'tish olib tashlangani uchun tasdiqlash oqimi endi yo'q, lekin maydon
+  /// qoldirildi: kirish mantiqi shunga qaraydi va seed adminni tasdiqlangan
+  /// deb belgilaydi.
   emailVerified Boolean  @default(false)
-  emailVerificationToken String? @unique
-  emailVerificationExpires DateTime?
-  passwordResetToken String? @unique
-  passwordResetExpires DateTime?
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 

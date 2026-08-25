@@ -155,61 +155,6 @@ export async function exchangeOAuthCode(code: string) {
   return res.data.user;
 }
 
-export async function register(name: string, email: string, password: string) {
-  const res = await authFetch<{ message: string; email: string }>("/auth/register", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, email, password }),
-  });
-  if (!res.ok) throw new Error(res.message || "Ro'yxatdan o'tish xatosi");
-  return res.message || res.data?.message || "Email tasdiqlash xabari yuborildi";
-}
-
-export async function verifyEmail(token: string) {
-  const res = await authFetch<{
-    token: string;
-    refreshToken: string;
-    user: AuthUser;
-  }>("/auth/verify-email", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token }),
-  });
-  if (!res.ok || !res.data) throw new Error(res.message || "Tasdiqlash xatosi");
-  saveAuth(res.data.token, res.data.user, res.data.refreshToken);
-  return res.data.user;
-}
-
-export async function resendVerification(email: string) {
-  const res = await authFetch<{ message: string }>("/auth/resend-verification", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
-  });
-  if (!res.ok) throw new Error(res.message || "Xatolik");
-  return res.message || res.data?.message || "Yuborildi";
-}
-
-export async function forgotPassword(email: string) {
-  const res = await authFetch<{ message: string }>("/auth/forgot-password", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
-  });
-  if (!res.ok) throw new Error(res.message || "Xatolik");
-  return res.message || res.data?.message || "Yuborildi";
-}
-
-export async function resetPassword(token: string, password: string) {
-  const res = await authFetch<{ message: string }>("/auth/reset-password", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token, password }),
-  });
-  if (!res.ok) throw new Error(res.message || "Xatolik");
-  return res.message || res.data?.message || "Parol yangilandi";
-}
-
 export async function telegramLogin(user: Record<string, unknown>) {
   const res = await authFetch<{
     token: string;
