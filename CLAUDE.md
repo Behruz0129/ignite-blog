@@ -41,9 +41,13 @@ Render free plan 15 daqiqa harakatsizlikdan keyin uxlaydi — birinchi so'rov
 `ADMIN` (kontent, moderatsiya, media) → `USER` (izoh va like). Foydalanuvchi
 boshqaruvi (`/api/users`) faqat SUPER_ADMIN'da.
 
-**Kontent uch turli**: News, Guides, Opinions. Uchalasi bir xil naqsh bo'yicha
-ishlaydi (slug, status, kategoriya, teglar, like, izoh) — biriga o'zgartirish
-kiritilsa, odatda uchalasiga ham kerak.
+**Kontent bitta modelda**: `Post` + `type` (NEWS / GUIDE / OPINION). Ilgari
+uchta alohida jadval edi va har o'zgarish uch joyda takrorlanardi. Endi
+`post.service.ts` bitta — yangi funksiya bir marta yoziladi.
+
+**Slug tur ichida unikal** (`@@unique([type, slug])`), shuning uchun
+`/news/x` va `/guides/x` bir vaqtda bo'la oladi. Bitta yozuvni olishda tur
+har doim kerak.
 
 **HTML har doim serverda sanitizatsiya qilinadi**
 (`backend/src/utils/sanitizeContent.ts`). Tiptap muharriridan kelgan HTML'ga
@@ -217,9 +221,8 @@ bekor qilingan tokenlarni bazadan tozalash.
 (WebGL / 2D-3D, quiz emas). Qanday joylashishi hali muhokama qilinmagan:
 alohida `/games` bo'limimi, natijalar saqlanadimi, qaysi texnologiya.
 
-**Ochiq arxitektura qarori:** News/Guides/Opinions ni bitta `Post` + `type`
-ga birlashtirish — hozir uch model uchun deyarli bir xil kod uch marta
-yozilgan. Kontent oz ekan, migratsiya arzon.
+~~**Ochiq arxitektura qarori:** News/Guides/Opinions ni birlashtirish~~ —
+**bajarildi** (2026-08-26).
 
 **2026-08-26 — Telegram avtoposting.**
 Maqola chop etilganda kanalga e'lon ketadi (`telegramPost.service.ts`).
@@ -260,3 +263,22 @@ tashlanadi.
 etilmagan teg jimgina yo'qoladi. Ruxsat: h2–h6, p, ul/ol/li, blockquote,
 pre/code, strong/em/u/mark, a, img, table, hr va YouTube iframe. `h1`
 ishlatilmaydi (sahifada sarlavha allaqachon h1).
+
+**2026-08-26 — katta refaktor va yangi bo'limlar.**
+
+*Kontent birlashtirildi.* News/Guides/Opinions → bitta `posts` jadvali va
+`type` maydoni. Migratsiya qo'lda yozildi (`prisma migrate dev` ma'lumotni
+yo'qotardi) va lokal bazada oldin/keyin sanoqlar taqqoslab tekshirildi.
+Tuzoq: Prisma m2m jadvalida ustunlar model nomining alfavit tartibida —
+kategoriyalarda `A` = kategoriya, teglarda `A` = maqola.
+
+*Sayt qayta tuzildi.* Navigatsiyada bitta "Materiallar" bo'limi (`/posts`):
+uchala tur aralash, tur/kategoriya/qidiruv — filtr. Eski `/news`, `/guides`,
+`/opinions` manzillari ataylab saqlandi (SEO). Qo'shildi: qidiruv,
+`/category/<slug>`, `/tag/<slug>`.
+
+*Resurslar bo'limi* (`/resources`): foydali havolalar — nom, URL, tavsif,
+rasm, erkin guruh nomi. Adminkada "Resurslar" sahifasi.
+
+Yangi maqola qo'shishda `postService.create(type, input)` ishlatiladi;
+izoh va like endi `postId` bilan ishlaydi (uchta ixtiyoriy maydon o'rniga).
