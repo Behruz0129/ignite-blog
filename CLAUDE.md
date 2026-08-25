@@ -91,21 +91,28 @@ kelmasa butun ommaviy sayt bitta IP sifatida limitga uriladi.
 
 Bular hali hal qilinmagan — navbatdagi sessiya shu ro'yxatdan davom etsin.
 
-1. **Pochta yozuvlari eski hostingga ishora qiladi.** `MX` yozuvi
-   `ignite.uz` ga qaraydi, u esa endi Vercel IP'si — ya'ni domenga kelgan
-   xat hech qayerga tushmaydi. `SPF` da ham eski hosting IP'si
-   (`185.196.212.52`). `ftp` va `mail` CNAME'lari ham eski, proxy yoqilgan
-   holda foydasiz. Pochta kerak bo'lsa qayta sozlash, kerak bo'lmasa
-   yozuvlarni tozalash kerak.
+1. ~~Pochta~~ — **kerak emas** (2026-08-25 qarori). `MX`, `SPF`, `ftp` va
+   `mail` yozuvlari eski hostingdan qolgan va ishlamaydi; ular shunchaki
+   ortiqcha, zarari yo'q. Kelajakda domen pochtasi kerak bo'lsa, o'shanda
+   noldan sozlanadi.
 2. **Apex va admin turlicha sozlangan**: `ignite.uz` DNS only, `admin`
    proxied. Ikkalasi ham ishlaydi; bir xil qilish shart emas, lekin bilib
    qo'yish kerak (Cloudflare "origin IP ochiq" deb ogohlantiradi).
 3. **`api.ignite.uz` subdomeni yo'q** — backend hali Render'ning uzun
-   manzilida. Domen bersa, `OAUTH_CALLBACK_BASE` ni ham yangilash kerak.
+   manzilida. Qilish tartibi (tartib muhim, aks holda Render domenni
+   tasdiqlay olmaydi):
+   1. Render → servis → Settings → Custom Domain → `api.ignite.uz`;
+   2. Cloudflare → DNS → CNAME `api` → `ignite-api-7qhs.onrender.com`,
+      **DNS only** (proxy yoqilsa Render sertifikat ololmaydi);
+   3. Render env: `OAUTH_CALLBACK_BASE=https://api.ignite.uz`,
+      `CORS_ORIGIN` ro'yxatini tekshirish;
+   4. Vercel (ikkala loyiha): `NEXT_PUBLIC_API_URL=https://api.ignite.uz/api`,
+      so'ng qayta deploy.
+
+   To'siq: Render dashboard'iga brauzerda kirilmagan.
 4. **Render free plan** — uyquga ketadi. Ommaviy sayt ISR bilan qutuladi,
    lekin adminkaga birinchi kirish sekin.
-5. **Bazada hali kontent yo'q** — ignite.uz "Hali kontent yo'q" holatini
-   ko'rsatadi. Tizim ishlayapti, faqat birinchi maqolalar kiritilmagan.
+5. **Kontentni egasi o'zi yozadi** — maqolalarni men kiritmayman.
 
 ---
 
@@ -138,3 +145,16 @@ Linux'ga xos yozuvlarni (`libc` maydonlari, `@emnapi/*` kabi optional
 paketlar) o'chirib yuboradi — Windows'da o'rnatilgani uchun. Bu o'zgarish
 commit qilinmadi va **bundan keyin ham qilinmasin**: Render va Vercel Linux'da
 build qiladi.
+
+**2026-08-25 — muharrir blog yozishga moslandi.**
+Adminka muharririga uch narsa qo'shildi: qator boshidagi `/` orqali blok
+tanlash menyusi (klaviatura bilan, nom bo'yicha filtr), rasmni Ctrl+V yoki
+sudrab tashlash bilan to'g'ridan-to'g'ri Cloudinary'ga yuklash, va yozilayotgan
+matnning brauzerdagi avtomatik zaxirasi (`src/lib/draft.ts`) — oyna yopilib
+ketsa "tiklash" satri chiqadi. Qo'shimcha: underline, highlight, tekislash,
+YouTube bloki.
+
+Muharrir qismlari: `admin/src/components/Editor.tsx` (asosiy),
+`admin/src/components/editor/slash-command.ts` (`/` menyusi mantiqi),
+`admin/src/components/editor/SlashList.tsx` (menyu ko'rinishi).
+Yangi blok qo'shish kerak bo'lsa — `slash-command.ts` dagi `buildItems`.
