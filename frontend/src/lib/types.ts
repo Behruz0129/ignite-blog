@@ -33,6 +33,8 @@ export interface ContentItem {
   _count?: { comments: number; likes: number };
   likedByMe?: boolean;
   comments?: PublicComment[];
+  // Tasdiqlangan izohlarning umumiy soni (comments massivi cheklangan)
+  commentCount?: number;
 }
 
 export interface PublicComment {

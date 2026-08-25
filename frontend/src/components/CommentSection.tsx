@@ -12,6 +12,10 @@ interface Props {
   contentId: string;
   type: ContentType;
   initialComments: PublicComment[];
+  // Tasdiqlangan izohlarning umumiy soni. `initialComments` serverda
+  // cheklangan (eng so'nggi 50 ta), shuning uchun sarlavhadagi son shu
+  // maydondan olinadi — aks holda 1000 izohli maqolada "50" ko'rinardi.
+  totalCount?: number;
 }
 
 function fieldFor(type: ContentType): "newsId" | "guideId" | "opinionId" {
@@ -32,9 +36,17 @@ export default function CommentSection({
   contentId,
   type,
   initialComments,
+  totalCount,
 }: Props) {
   const { user } = useAuth();
   const [comments, setComments] = useState<PublicComment[]>(initialComments);
+  // Serverda ko'rsatilmay qolgan izohlar soni (o'zgarmas — props'dan hosila).
+  // Yangi izoh qo'shilganda `comments` o'sadi, jami esa to'g'ri qoladi.
+  const extraCount = Math.max(
+    0,
+    (totalCount ?? initialComments.length) - initialComments.length
+  );
+  const shownTotal = comments.length + extraCount;
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [content, setContent] = useState("");
@@ -92,9 +104,14 @@ export default function CommentSection({
   return (
     <section className="mt-16 border-t border-line pt-12">
       <h2 className="text-xl font-semibold tracking-tight">
-        Izohlar{" "}
-        <span className="text-ink-soft">({comments.length})</span>
+        Izohlar <span className="text-ink-soft">({shownTotal})</span>
       </h2>
+
+      {extraCount > 0 && (
+        <p className="mt-2 text-sm text-ink-soft">
+          Eng so&apos;nggi {comments.length} tasi ko&apos;rsatilmoqda.
+        </p>
+      )}
 
       <div className="mt-6 space-y-6">
         {comments.length === 0 ? (

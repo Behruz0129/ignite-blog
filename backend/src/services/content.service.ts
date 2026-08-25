@@ -21,6 +21,9 @@ import { getPagination, buildMeta } from "../utils/pagination";
 // Qaysi model bilan ishlayotganimiz
 type ContentModel = "news" | "guide" | "opinion";
 
+/** Detal sahifada bir yo'la yuboriladigan izohlar soni (qolganlari — keyin) */
+const COMMENTS_LIMIT = 50;
+
 interface ListOptions {
   page?: number;
   limit?: number;
@@ -193,9 +196,14 @@ export function createContentService(model: ContentModel) {
         where,
         include: {
           ...includeRelations,
+          // Diqqat: `take` MAJBURIY. Avval bu yerda limit yo'q edi va
+          // ommalashgan maqolaning barcha izohlari (mingtasi ham bo'lishi
+          // mumkin) bitta javobga tiqilardi. Eng so'nggi N ta yetarli;
+          // umumiy son alohida `commentCount` sifatida qaytariladi.
           comments: {
             where: { status: "APPROVED" },
             orderBy: { createdAt: "desc" },
+            take: COMMENTS_LIMIT,
             select: {
               id: true,
               authorName: true,
@@ -212,6 +220,20 @@ export function createContentService(model: ContentModel) {
         throw AppError.notFound("Kontent topilmadi");
       }
 
+      // Tasdiqlangan izohlarning UMUMIY soni (yuqoridagi ro'yxat cheklangan).
+      // `_count.comments` bu yerda yaramaydi — u moderatsiyadan o'tmagan
+      // (PENDING/REJECTED) izohlarni ham sanaydi.
+      const commentCount = await prisma.comment.count({
+        where: {
+          status: "APPROVED",
+          ...(model === "news"
+            ? { newsId: item.id }
+            : model === "guide"
+              ? { guideId: item.id }
+              : { opinionId: item.id }),
+        },
+      });
+
       let likedByMe = false;
       if (userId) {
         const likeWhere =
@@ -223,7 +245,7 @@ export function createContentService(model: ContentModel) {
         likedByMe = Boolean(await prisma.like.findFirst({ where: likeWhere }));
       }
 
-      return { ...item, likedByMe };
+      return { ...item, commentCount, likedByMe };
     },
 
     /**

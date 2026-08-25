@@ -4,18 +4,58 @@
  * Bir IP manzildan kelgan so'rovlar sonini cheklaydi.
  * Bu DDoS va parol "brute-force" hujumlaridan himoya qiladi.
  *
- * - apiLimiter: umumiy API uchun (yumshoqroq).
- * - authLimiter: login uchun (qattiqroq - parol tanlashni qiyinlashtiradi).
+ * - readLimiter:  public GET so'rovlari (keng limit)
+ * - writeLimiter: yozuv amallari (POST/PUT/PATCH/DELETE)
+ * - authLimiter:  login/register/parol tiklash (qattiq)
+ * - refreshLimiter: token yangilash (o'rtacha)
  */
 
 import rateLimit from "express-rate-limit";
+import type { Request } from "express";
 import { env } from "../config/env";
 
-export const apiLimiter = rateLimit({
+/**
+ * Ichki (server-to-server) so'rovlarni limitdan chiqarish.
+ *
+ * MUHIM: Next.js public sayti sahifalarni serverda render qiladi (SSR/ISR),
+ * ya'ni barcha o'qish so'rovlari BITTA IP dan — Next serverining IP'sidan —
+ * keladi. Oddiy IP limiti bunda tashrifchini emas, saytning O'ZINI bo'g'adi:
+ * minglab maqola revalidate bo'lganda limit bir zumda tugaydi va butun sayt
+ * 429 qaytara boshlaydi.
+ *
+ * Yechim: Next serveri so'rovlarga maxfiy sarlavha qo'shadi va shu sarlavha
+ * mos kelsa limit qo'llanmaydi. INTERNAL_API_TOKEN belgilanmagan bo'lsa
+ * (masalan lokal dev'da) bu mexanizm o'chiq bo'ladi.
+ */
+function isInternalRequest(req: Request): boolean {
+  if (!env.INTERNAL_API_TOKEN) return false;
+  return req.get("x-internal-token") === env.INTERNAL_API_TOKEN;
+}
+
+/**
+ * Public o'qish (GET). Bular keshlanadigan va arzon so'rovlar, shuning uchun
+ * limit keng — maqsad haqiqiy o'quvchini bloklamay, faqat qo'pol
+ * skreyping/DDoS ni jilovlash.
+ */
+export const readLimiter = rateLimit({
+  windowMs: env.RATE_LIMIT_WINDOW_MINUTES * 60 * 1000,
+  max: env.RATE_LIMIT_READ_MAX,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.method !== "GET" || isInternalRequest(req),
+  message: {
+    success: false,
+    message: "Juda ko'p so'rov yuborildi. Birozdan keyin urinib ko'ring.",
+  },
+});
+
+/** Yozuv amallari — bular qimmat va kamdan-kam, limit torroq. */
+export const writeLimiter = rateLimit({
   windowMs: env.RATE_LIMIT_WINDOW_MINUTES * 60 * 1000,
   max: env.RATE_LIMIT_MAX,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === "GET" || isInternalRequest(req),
   message: {
     success: false,
     message: "Juda ko'p so'rov yuborildi. Birozdan keyin urinib ko'ring.",

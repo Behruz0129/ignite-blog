@@ -23,6 +23,7 @@ import { createContentService } from "../services/content.service";
 import { createContentController } from "../controllers/content.controller";
 import { authenticate, authorize, optionalAuth } from "../middlewares/auth.middleware";
 import { validate } from "../middlewares/validate.middleware";
+import { publicCache } from "../middlewares/cache.middleware";
 import {
   listQuerySchema,
   idParamSchema,
@@ -40,7 +41,7 @@ export function makeContentRouter(
   const ctrl = createContentController(service);
 
   // --- PUBLIC ---
-  router.get("/", optionalAuth, validate(listQuerySchema, "query"), ctrl.publicList);
+  router.get("/", publicCache(), optionalAuth, validate(listQuerySchema, "query"), ctrl.publicList);
 
   // --- ADMIN ---
   // Diqqat: aniq yo'llar (/admin/...) dinamik /:slug dan OLDIN turishi kerak.
@@ -102,7 +103,7 @@ export function makeContentRouter(
   );
 
   // Public slug route - eng oxirida (boshqa yo'llarni "yutib yubormasligi" uchun)
-  router.get("/:slug", optionalAuth, validate(slugParamSchema, "params"), ctrl.publicGetBySlug);
+  router.get("/:slug", publicCache(), optionalAuth, validate(slugParamSchema, "params"), ctrl.publicGetBySlug);
 
   return router;
 }

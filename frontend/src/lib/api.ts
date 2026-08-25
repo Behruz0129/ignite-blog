@@ -17,11 +17,25 @@ export { PUBLIC_API_URL };
 
 const REVALIDATE_SECONDS = 60;
 
+/**
+ * Bu funksiya faqat SERVER tomonda ishlaydi (server komponentlar, sitemap).
+ * Ya'ni backend nuqtai nazaridan barcha so'rovlar BITTA IP dan — shu Next
+ * serveridan — keladi va oddiy IP rate limitiga birinchi bo'lib urilardi.
+ *
+ * INTERNAL_API_TOKEN (NEXT_PUBLIC_ EMAS, shuning uchun brauzer bundle'iga
+ * tushmaydi) belgilangan bo'lsa, uni sarlavhada yuboramiz va backend bu
+ * so'rovlarni limitdan chiqaradi.
+ */
+function internalHeaders(): Record<string, string> {
+  const token = process.env.INTERNAL_API_TOKEN;
+  return token ? { "x-internal-token": token } : {};
+}
+
 async function apiGet<T>(path: string): Promise<ApiResponse<T> | null> {
   try {
     const res = await fetch(`${BASE_URL}${path}`, {
       next: { revalidate: REVALIDATE_SECONDS },
-      headers: { Accept: "application/json" },
+      headers: { Accept: "application/json", ...internalHeaders() },
     });
     if (!res.ok) return null;
     return (await res.json()) as ApiResponse<T>;

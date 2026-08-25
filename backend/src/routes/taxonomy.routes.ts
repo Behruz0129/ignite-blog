@@ -12,6 +12,7 @@ import { createTaxonomyController } from "../controllers/taxonomy.controller";
 import { authenticate, authorize } from "../middlewares/auth.middleware";
 import { validate } from "../middlewares/validate.middleware";
 import { idParamSchema } from "../validators/common.validator";
+import { publicCache } from "../middlewares/cache.middleware";
 
 type TaxService = ReturnType<typeof createTaxonomyService>;
 
@@ -23,7 +24,8 @@ export function makeTaxonomyRouter(
   const router = Router();
   const ctrl = createTaxonomyController(service);
 
-  router.get("/", ctrl.list);
+  // Kategoriya/teglar kamdan-kam o'zgaradi — 5 daqiqa keshlanadi
+  router.get("/", publicCache(300, 3600), ctrl.list);
   router.get("/:id", validate(idParamSchema, "params"), ctrl.getById);
 
   router.post(

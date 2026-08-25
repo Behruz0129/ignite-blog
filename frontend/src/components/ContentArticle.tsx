@@ -117,6 +117,7 @@ export default function ContentArticle({
           contentId={item.id}
           type={type}
           initialComments={item.comments ?? []}
+          totalCount={item.commentCount}
         />
       </div>
     </article>

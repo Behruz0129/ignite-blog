@@ -86,7 +86,11 @@ export const mediaService = {
 
     if (isCloudinaryConfigured) {
       try {
-        await cloudinary.uploader.destroy(media.publicId);
+        // `invalidate: true` — faylni faqat Cloudinary omboridan emas, CDN
+        // keshidan ham chiqaradi. Busiz o'chirilgan rasm URL'i yana bir
+        // muddat 200 qaytarib turadi (keshdan), bu esa "o'chirdim, lekin
+        // hali ko'rinyapti" degan chalkashlikka olib keladi.
+        await cloudinary.uploader.destroy(media.publicId, { invalidate: true });
       } catch {
         // Cloudinary'da bo'lmasa ham bazadan o'chiramiz
       }

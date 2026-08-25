@@ -53,7 +53,14 @@ const envSchema = z.object({
   ADMIN_PASSWORD: z.string().default("Admin12345!"),
 
   RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().default(15),
+  // Yozuv amallari (POST/PUT/PATCH/DELETE) uchun
   RATE_LIMIT_MAX: z.coerce.number().default(300),
+  // Public o'qish (GET) uchun — keshlanadigan, arzon so'rovlar
+  RATE_LIMIT_READ_MAX: z.coerce.number().default(2000),
+
+  // Next.js serveri (SSR/ISR) so'rovlarini rate limitdan chiqarish uchun
+  // maxfiy sarlavha qiymati. Bo'sh bo'lsa bu mexanizm o'chiq bo'ladi.
+  INTERNAL_API_TOKEN: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -19,7 +19,7 @@ import { corsOrigins, env } from "./config/env";
 import { logger } from "./config/logger";
 import { swaggerSpec } from "./config/swagger";
 import { configurePassport } from "./config/passport";
-import { apiLimiter } from "./middlewares/rateLimit.middleware";
+import { readLimiter, writeLimiter } from "./middlewares/rateLimit.middleware";
 import { notFound } from "./middlewares/notFound.middleware";
 import { errorHandler } from "./middlewares/error.middleware";
 import apiRoutes from "./routes";
@@ -65,8 +65,11 @@ export function createApp(): Application {
     })
   );
 
-  // 6) Rate limiting - faqat /api ostida
-  app.use("/api", apiLimiter);
+  // 6) Rate limiting - faqat /api ostida.
+  //    O'qish va yozuv alohida limitlarda: public GET so'rovlari keng
+  //    limitga ega, chunki ular keshlanadi va SSR serveri ham shu yo'ldan
+  //    o'tadi; yozuv amallari esa torroq limitda qoladi.
+  app.use("/api", readLimiter, writeLimiter);
 
   // 7) Swagger hujjat
   app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
