@@ -98,13 +98,18 @@ kelmasa butun ommaviy sayt bitta IP sifatida limitga uriladi.
 
 Bular hali hal qilinmagan — navbatdagi sessiya shu ro'yxatdan davom etsin.
 
-1. **SHOSHILINCH — Render'da `CORS_ORIGIN` to'ldirilmagan.** Shu sababli
-   `admin.ignite.uz` ga kirib bo'lmaydi va ommaviy saytda like/izoh/
-   ro'yxatdan o'tish ishlamaydi. Render → ignite-api → Environment →
-   `CORS_ORIGIN` =
-   `https://ignite.uz,https://www.ignite.uz,https://admin.ignite.uz`
-   (probelsiz, vergul bilan), so'ng servisni qayta ishga tushirish.
-   `FRONTEND_URL` ham to'ldirilgani tekshirilsin.
+1. **Render env'da uchta sozlama chala** (2026-08-26 holatiga):
+   - `FRONTEND_URL` = `https://ignite-daily.vercel.app/` bo'lib turibdi —
+     `https://ignite.uz` bo'lishi kerak. Email tasdiqlash, parol tiklash va
+     OAuth qaytishi shu manzilga tayanadi.
+   - `RESEND_API_KEY` yaroqsiz ("API key is invalid") — shu sababli
+     ro'yxatdan o'tish umuman ishlamaydi (email ketmasa foydalanuvchi
+     yaratilmaydi). Resend'da domen tasdiqlangani va `EMAIL_FROM` o'sha
+     domenga tegishli ekani tekshirilsin.
+   - Telegram Login Widget "Bot domain invalid" beradi — BotFather'da
+     `/setdomain` → `ignite.uz` qilinmagan.
+
+   `CORS_ORIGIN` ~~to'ldirildi~~ ✓ (uchala domen 204 + ACAO oladi).
 
 2. ~~Pochta~~ — **kerak emas** (2026-08-25 qarori). `MX`, `SPF`, `ftp` va
    `mail` yozuvlari eski hostingdan qolgan va ishlamaydi; ular shunchaki
@@ -181,3 +186,28 @@ o'rnatilmagan, default `http://localhost:3000` qolib ketgan. Kod tomonda uch
 narsa tuzatildi (rad etish endi 500 emas, `FRONTEND_URL` avtomatik qo'shiladi,
 startup'da ro'yxat va ogohlantirish loglanadi), lekin **asosiy yechim —
 Render env'ini to'ldirish**, u §4 ning 1-bandida turibdi.
+
+**2026-08-26 — auth xavfsizlik auditi va tuzatishlar.**
+Audit natijasi: asos mustahkam (bcrypt, refresh hash + rotatsiya, token
+muddatlari, user enumeration himoyasi, rate limit faqat muvaffaqiyatsiz
+urinishlarni sanaydi). Uchta kamchilik yopildi:
+
+1. OAuth'da `state` yo'q edi → CSRF. Endi HttpOnly cookie + `state` juftligi
+   (`src/utils/oauthState.ts`, 8 ta test bilan).
+2. Tokenlar redirect URL query'sida uzatilardi → tarix/Referer/loglarga
+   sizardi. Endi 60 soniyalik bir martalik kod (`AuthCode` modeli,
+   `authCode.service.ts`) va POST `/api/auth/exchange`.
+3. Refresh token qayta ishlatilsa endi o'g'rilik deb hisoblanadi va
+   foydalanuvchining barcha sessiyalari yopiladi.
+
+Hali qilinmagan (jiddiylik pastroq): kirgan holda parolni o'zgartirish,
+akkauntni o'chirish, "barcha qurilmalardan chiqish", login'dagi timing farqi,
+bekor qilingan tokenlarni bazadan tozalash.
+
+**Rejadagi yangi imkoniyatlar** (egasi tanlagan): sayt ichida haqiqiy
+mini o'yinlar (WebGL / 2D-3D, quiz emas) va yangi maqola chop etilganda
+Telegram kanalga avtoposting (`telegram.service.ts` asosi bor).
+
+**Ochiq arxitektura qarori:** News/Guides/Opinions ni bitta `Post` + `type`
+ga birlashtirish — hozir uch model uchun deyarli bir xil kod uch marta
+yozilgan. Kontent oz ekan, migratsiya arzon.
