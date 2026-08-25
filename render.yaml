@@ -44,13 +44,13 @@ services:
       # --- Manzillar ---
       # CORS_ORIGIN: admin va public sayt manzillari, vergul bilan
       - key: CORS_ORIGIN
-        sync: false
+        sync: false # masalan: https://ignite.uz,https://admin.ignite.uz
       # Bu servisning o'z manzili (OAuth callback shu asosda quriladi)
       - key: OAUTH_CALLBACK_BASE
-        sync: false
+        sync: false # masalan: https://api.ignite.uz (noto'g'ri bo'lsa OAuth "redirect_uri_mismatch" beradi)
       # Public sayt manzili (OAuth redirect va email havolalari uchun)
       - key: FRONTEND_URL
-        sync: false
+        sync: false # masalan: https://ignite.uz
 
       # --- OAuth (ixtiyoriy: bo'sh bo'lsa provayder o'chiq) ---
       - key: GOOGLE_CLIENT_ID

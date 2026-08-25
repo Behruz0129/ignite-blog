@@ -35,10 +35,15 @@ export const dashboardService = {
       prisma.media.count(),
     ]);
 
-    // So'nggi izohlar (moderatsiya uchun qulay)
+    // So'nggi izohlar (moderatsiya uchun qulay).
+    // "user" ni ham olamiz: eski yozuvlarda authorName bo'sh bo'lishi mumkin,
+    // bunday holda ism ro'yxatdan o'tgan foydalanuvchidan olinadi.
     const recentComments = await prisma.comment.findMany({
       orderBy: { createdAt: "desc" },
       take: 5,
+      include: {
+        user: { select: { id: true, name: true, avatar: true } },
+      },
     });
 
     return {

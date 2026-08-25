@@ -2,74 +2,250 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { clearAuth, getUser, isSuperAdmin } from "@/lib/auth";
+import { initial } from "@/lib/format";
+import Icon, { type IconName } from "./Icon";
 
-const NAV = [
-  { href: "/dashboard", label: "Dashboard", icon: "📊" },
-  { href: "/news", label: "Yangiliklar", icon: "📰" },
-  { href: "/guides", label: "Qo'llanmalar", icon: "📘" },
-  { href: "/opinions", label: "Maqolalar", icon: "💬" },
-  { href: "/categories", label: "Kategoriyalar", icon: "🗂️" },
-  { href: "/tags", label: "Teglar", icon: "🏷️" },
-  { href: "/comments", label: "Izohlar", icon: "✅" },
-  { href: "/media", label: "Media", icon: "🖼️" },
+interface NavItem {
+  href: string;
+  label: string;
+  icon: IconName;
+  /** faqat asosiy admin ko'radi */
+  superOnly?: boolean;
+}
+
+interface NavGroup {
+  title: string;
+  items: NavItem[];
+}
+
+// Bo'limlar guruhlab beriladi — bitta ro'yxatda 9 ta havola ko'z charchatadi
+const NAV: NavGroup[] = [
+  {
+    title: "Umumiy",
+    items: [{ href: "/dashboard", label: "Boshqaruv", icon: "dashboard" }],
+  },
+  {
+    title: "Kontent",
+    items: [
+      { href: "/news", label: "Yangiliklar", icon: "news" },
+      { href: "/guides", label: "Qo'llanmalar", icon: "guide" },
+      { href: "/opinions", label: "Maqolalar", icon: "opinion" },
+      { href: "/media", label: "Media", icon: "image" },
+    ],
+  },
+  {
+    title: "Tasniflash",
+    items: [
+      { href: "/categories", label: "Kategoriyalar", icon: "folder" },
+      { href: "/tags", label: "Teglar", icon: "tag" },
+    ],
+  },
+  {
+    title: "Jamoa",
+    items: [
+      { href: "/comments", label: "Izohlar", icon: "comment" },
+      {
+        href: "/users",
+        label: "Foydalanuvchilar",
+        icon: "users",
+        superOnly: true,
+      },
+    ],
+  },
 ];
 
-const SUPER_NAV = { href: "/users", label: "Foydalanuvchilar", icon: "👥" };
+const COLLAPSE_KEY = "ignite.sidebar.collapsed";
 
-export default function Sidebar() {
+export default function Sidebar({
+  mobileOpen,
+  onCloseMobile,
+}: {
+  mobileOpen: boolean;
+  onCloseMobile: () => void;
+}) {
   const pathname = usePathname();
   const router = useRouter();
-  const user = getUser();
+  const [collapsed, setCollapsed] = useState(false);
+  const [user, setUser] = useState<ReturnType<typeof getUser>>(null);
 
-  const navItems = isSuperAdmin(user?.role)
-    ? [...NAV.slice(0, 4), SUPER_NAV, ...NAV.slice(4)]
-    : NAV;
+  // localStorage faqat brauzerda bor — shuning uchun effekt ichida o'qiymiz
+  useEffect(() => {
+    setUser(getUser());
+    setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "1");
+  }, []);
+
+  function toggleCollapse() {
+    setCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0");
+      return next;
+    });
+  }
 
   function logout() {
     clearAuth();
     router.replace("/login");
   }
 
+  const isSuper = isSuperAdmin(user?.role);
+
+  // Ruxsati yo'q bo'limlarni olib tashlaymiz; bo'sh qolgan guruh ham chiqmaydi
+  const groups = NAV.map((g) => ({
+    ...g,
+    items: g.items.filter((i) => !i.superOnly || isSuper),
+  })).filter((g) => g.items.length > 0);
+
   return (
-    <aside className="flex h-screen w-64 flex-col bg-slate-900 text-slate-200">
-      <div className="border-b border-slate-700 px-6 py-5">
-        <h1 className="text-lg font-bold text-white">🔥 Ignite Blog</h1>
-        <p className="text-xs text-slate-400">CMS Admin</p>
-      </div>
+    <>
+      {/* Mobil qoplama */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-ink/40 lg:hidden"
+          onClick={onCloseMobile}
+          aria-hidden="true"
+        />
+      )}
 
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {navItems.map((item) => {
-          const active =
-            pathname === item.href || pathname.startsWith(item.href + "/");
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
-                active
-                  ? "bg-brand text-white"
-                  : "text-slate-300 hover:bg-slate-800"
-              }`}
-            >
-              <span>{item.icon}</span>
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div className="border-t border-slate-700 px-4 py-4">
-        <p className="truncate text-sm font-medium text-white">{user?.name}</p>
-        <p className="truncate text-xs text-slate-400">{user?.email}</p>
-        <p className="mt-1 text-[11px] text-slate-500">{user?.role}</p>
-        <button
-          onClick={logout}
-          className="mt-3 w-full rounded-lg bg-slate-800 py-2 text-sm text-slate-200 transition hover:bg-red-600 hover:text-white"
+      {/* shrink-0 + min-w-0 shart: flex elementining "avtomatik minimal kengligi"
+          (min-width: auto) kontent kengligiga tenglashib, yig'ilgan holatdagi
+          w-[72px] ni bosib ketadi. */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex min-w-0 shrink-0 flex-col
+                    overflow-hidden bg-rail text-white
+                    transition-[width,transform] duration-200
+                    lg:static lg:translate-x-0
+                    ${collapsed ? "w-[72px]" : "w-64"}
+                    ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
+      >
+        {/* Logotip */}
+        <div
+          className={`flex h-16 shrink-0 items-center gap-2.5 border-b border-rail-line ${
+            collapsed ? "justify-center px-0" : "px-5"
+          }`}
         >
-          Chiqish
-        </button>
-      </div>
-    </aside>
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand text-[15px] font-bold">
+            I
+          </span>
+          {!collapsed && (
+            <span className="min-w-0">
+              <span className="block truncate text-[15px] font-semibold leading-tight">
+                Ignite Blog
+              </span>
+              <span className="block text-[11px] text-white/45">
+                Boshqaruv paneli
+              </span>
+            </span>
+          )}
+        </div>
+
+        {/* Navigatsiya */}
+        <nav className="flex-1 overflow-y-auto px-3 py-4">
+          {groups.map((group) => (
+            <div key={group.title} className="mb-5 last:mb-0">
+              {!collapsed && (
+                <p className="mb-1.5 px-3 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-white/35">
+                  {group.title}
+                </p>
+              )}
+
+              {group.items.map((item) => {
+                const active =
+                  pathname === item.href ||
+                  pathname.startsWith(item.href + "/");
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onCloseMobile}
+                    title={collapsed ? item.label : undefined}
+                    className={`group relative mb-0.5 flex items-center gap-3 rounded-lg py-2 text-sm transition
+                      ${collapsed ? "justify-center px-0" : "px-3"}
+                      ${
+                        active
+                          ? "bg-rail-soft font-medium text-white"
+                          : "text-white/60 hover:bg-rail-soft/60 hover:text-white"
+                      }`}
+                  >
+                    {/* Faol bo'limning chap belgisi */}
+                    {active && (
+                      <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r bg-brand" />
+                    )}
+                    <Icon
+                      name={item.icon}
+                      className="h-[18px] w-[18px] shrink-0"
+                    />
+                    {!collapsed && (
+                      <span className="truncate">{item.label}</span>
+                    )}
+                  </Link>
+                );
+              })}
+
+              {/* Yig'ilgan holatda guruhlar chiziq bilan ajratiladi */}
+              {collapsed && (
+                <div className="mx-auto mt-3 h-px w-6 bg-rail-line last:hidden" />
+              )}
+            </div>
+          ))}
+        </nav>
+
+        {/* Foydalanuvchi */}
+        <div className="shrink-0 border-t border-rail-line p-3">
+          <div
+            className={`flex items-center gap-3 rounded-lg p-2 ${
+              collapsed ? "justify-center" : ""
+            }`}
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand/25 text-[13px] font-semibold text-white">
+              {initial(user?.name || "?")}
+            </span>
+            {!collapsed && (
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13px] font-medium">{user?.name}</p>
+                <p className="truncate text-[11px] text-white/45">
+                  {user?.role === "SUPER_ADMIN" ? "Bosh admin" : "Admin"}
+                </p>
+              </div>
+            )}
+            {!collapsed && (
+              <button
+                onClick={logout}
+                title="Chiqish"
+                aria-label="Chiqish"
+                className="rounded-md p-1.5 text-white/50 transition hover:bg-danger hover:text-white"
+              >
+                <Icon name="logout" className="h-[18px] w-[18px]" />
+              </button>
+            )}
+          </div>
+
+          {collapsed && (
+            <button
+              onClick={logout}
+              title="Chiqish"
+              aria-label="Chiqish"
+              className="mt-1 flex w-full justify-center rounded-md p-2 text-white/50 transition hover:bg-danger hover:text-white"
+            >
+              <Icon name="logout" className="h-[18px] w-[18px]" />
+            </button>
+          )}
+
+          {/* Yig'ish tugmasi — faqat kattaroq ekranda */}
+          <button
+            onClick={toggleCollapse}
+            title={collapsed ? "Panelni yoyish" : "Panelni yig'ish"}
+            className={`mt-2 hidden w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px]
+                        text-white/45 transition hover:bg-rail-soft hover:text-white lg:flex
+                        ${collapsed ? "justify-center px-0" : ""}`}
+          >
+            <Icon name="panel" className="h-[18px] w-[18px] shrink-0" />
+            {!collapsed && <span>Yig'ish</span>}
+          </button>
+        </div>
+      </aside>
+    </>
   );
 }

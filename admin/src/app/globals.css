@@ -2,69 +2,306 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: light;
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply bg-canvas font-sans text-[15px] text-ink antialiased;
+  }
+  ::selection {
+    @apply bg-brand/15;
+  }
+  /* Nozik scrollbar — panel ichidagi uzun ro'yxatlar uchun */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #cfcfd6 transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: #cfcfd6;
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background-clip: content-box;
+  }
 }
 
-body {
-  @apply bg-slate-100 text-slate-800 antialiased;
+@layer components {
+  /* ------------------------------------------------------ kartochka */
+  .card {
+    @apply rounded-xl border border-line bg-paper shadow-card;
+  }
+  .card-pad {
+    @apply p-5;
+  }
+  .card-title {
+    @apply text-[13px] font-semibold uppercase tracking-[0.08em] text-ink-faint;
+  }
+
+  /* ------------------------------------------------------ tugmalar */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2
+           text-sm font-medium transition
+           disabled:cursor-not-allowed disabled:opacity-45;
+  }
+  .btn-primary {
+    @apply btn bg-brand text-white hover:bg-brand-dark;
+  }
+  .btn-secondary {
+    @apply btn border border-line bg-paper text-ink hover:border-line-strong hover:bg-canvas;
+  }
+  .btn-ghost {
+    @apply btn text-ink-soft hover:bg-canvas hover:text-ink;
+  }
+  .btn-danger {
+    @apply btn border border-danger/20 bg-danger-soft text-danger hover:bg-danger hover:text-white;
+  }
+  .btn-sm {
+    @apply px-2.5 py-1.5 text-[13px];
+  }
+  .btn-icon {
+    @apply inline-flex h-9 w-9 items-center justify-center rounded-lg text-ink-soft
+           transition hover:bg-canvas hover:text-ink;
+  }
+
+  /* ------------------------------------------------------ maydonlar */
+  .field-label {
+    @apply mb-1.5 block text-[13px] font-medium text-ink;
+  }
+  .field-hint {
+    @apply mt-1.5 text-xs text-ink-faint;
+  }
+  .input {
+    @apply w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink
+           outline-none transition
+           placeholder:text-ink-faint
+           focus:border-brand focus:ring-4 focus:ring-brand/10;
+  }
+  .input-lg {
+    @apply px-3.5 py-2.5 text-base;
+  }
+  .select {
+    @apply input appearance-none bg-[length:16px] bg-[right_0.7rem_center] bg-no-repeat pr-9;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235f5f6b' stroke-width='1.8' stroke-linecap='round'%3E%3Cpath d='M5.5 9.5 12 16l6.5-6.5'/%3E%3C/svg%3E");
+  }
+
+  /* ------------------------------------------------------ nishonlar */
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium;
+  }
+  .pill-ok {
+    @apply pill bg-ok-soft text-ok;
+  }
+  .pill-warn {
+    @apply pill bg-warn-soft text-warn;
+  }
+  .pill-danger {
+    @apply pill bg-danger-soft text-danger;
+  }
+  .pill-muted {
+    @apply pill bg-canvas text-ink-soft;
+  }
+  .pill-brand {
+    @apply pill bg-brand-soft text-brand;
+  }
+
+  /* ------------------------------------------------------ jadval */
+  /* overflow-x-auto: tor ekranda jadval kesilib qolmasin, aylantirilsin.
+     Rounded burchaklar overflow visible bo'lmagani uchun baribir ishlaydi. */
+  .table-wrap {
+    @apply overflow-x-auto rounded-xl border border-line bg-paper shadow-card;
+  }
+  .table {
+    @apply w-full min-w-[36rem] text-sm;
+  }
+  .table thead th {
+    @apply border-b border-line bg-canvas px-5 py-3 text-left text-[12px]
+           font-semibold uppercase tracking-[0.06em] text-ink-faint;
+  }
+  .table tbody td {
+    @apply border-b border-line px-5 py-3.5 align-middle;
+  }
+  .table tbody tr:last-child td {
+    @apply border-b-0;
+  }
+  .table tbody tr {
+    @apply transition hover:bg-canvas/70;
+  }
+
+  /* ------------------------------------------------------ sahifa boshi */
+  .page-title {
+    @apply text-[26px] font-semibold tracking-[-0.02em] text-ink;
+  }
+  .page-sub {
+    @apply mt-1 text-sm text-ink-soft;
+  }
+
+  .empty-state {
+    @apply flex flex-col items-center justify-center gap-2 px-6 py-14 text-center;
+  }
 }
 
-/* Tiptap editor ko'rinishi (prose) */
+/* ==========================================================================
+   MUHARRIR (Tiptap)
+   Yozish maydoni — adminkaning eng ko'p ishlatiladigan joyi, shuning uchun
+   tipografiyaga alohida e'tibor: kengligi cheklangan, satrlari havodor.
+   ========================================================================== */
+
+.tiptap-shell {
+  @apply rounded-xl border border-line bg-paper shadow-card;
+}
+/* To'liq ekran rejimi */
+.tiptap-shell.is-fullscreen {
+  @apply fixed inset-0 z-50 rounded-none border-0 shadow-none;
+}
+.tiptap-shell.is-fullscreen .tiptap-scroll {
+  @apply h-[calc(100vh-6.5rem)] overflow-y-auto;
+}
+
+.tiptap-toolbar {
+  @apply sticky top-0 z-20 flex flex-wrap items-center gap-0.5 rounded-t-xl
+         border-b border-line bg-paper/95 px-2 py-1.5 backdrop-blur;
+}
+.tiptap-shell.is-fullscreen .tiptap-toolbar {
+  @apply rounded-none;
+}
+.tiptap-divider {
+  @apply mx-1 h-5 w-px shrink-0 bg-line;
+}
+
+.tiptap-btn {
+  @apply inline-flex h-8 min-w-8 items-center justify-center gap-1 rounded-md px-1.5
+         text-ink-soft transition
+         hover:bg-canvas hover:text-ink
+         disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent;
+}
+.tiptap-btn.is-active {
+  @apply bg-brand-soft text-brand;
+}
+
+.tiptap-status {
+  @apply flex items-center justify-between gap-4 rounded-b-xl border-t border-line
+         bg-canvas px-4 py-2 text-xs text-ink-faint;
+}
+.tiptap-shell.is-fullscreen .tiptap-status {
+  @apply rounded-none;
+}
+
+/* --- yozuv maydoni --- */
 .tiptap-content {
-  @apply text-slate-800 leading-relaxed;
+  @apply mx-auto w-full max-w-[46rem] px-4 py-6 text-[16.5px] leading-[1.75] text-ink sm:px-6 sm:py-8;
+  min-height: 28rem;
 }
 .tiptap-content:focus {
   outline: none;
 }
+.tiptap-content > * + * {
+  margin-top: 0.9em;
+}
 .tiptap-content h1 {
-  @apply text-3xl font-bold mt-6 mb-3;
+  @apply mt-8 text-[2rem] font-semibold leading-tight tracking-[-0.02em];
 }
 .tiptap-content h2 {
-  @apply text-2xl font-bold mt-5 mb-2;
+  @apply mt-7 text-[1.5rem] font-semibold leading-snug tracking-[-0.015em];
 }
 .tiptap-content h3 {
-  @apply text-xl font-semibold mt-4 mb-2;
-}
-.tiptap-content p {
-  @apply my-2;
+  @apply mt-6 text-[1.2rem] font-semibold leading-snug;
 }
 .tiptap-content ul {
-  @apply list-disc pl-6 my-2;
+  @apply list-disc pl-6;
 }
 .tiptap-content ol {
-  @apply list-decimal pl-6 my-2;
+  @apply list-decimal pl-6;
+}
+.tiptap-content li > p {
+  margin: 0;
+}
+.tiptap-content li + li {
+  margin-top: 0.3em;
 }
 .tiptap-content blockquote {
-  @apply border-l-4 border-brand pl-4 italic text-slate-600 my-3;
+  @apply border-l-2 border-ink pl-5 text-ink-soft;
 }
 .tiptap-content a {
-  @apply text-brand underline;
+  @apply text-brand underline decoration-brand/30 underline-offset-2;
 }
 .tiptap-content img {
-  @apply max-w-full rounded-lg my-3;
+  @apply my-4 max-w-full rounded-xl border border-line;
+}
+.tiptap-content img.ProseMirror-selectednode {
+  @apply ring-2 ring-brand ring-offset-2;
+}
+.tiptap-content hr {
+  @apply my-8 border-line;
 }
 .tiptap-content pre {
-  @apply bg-slate-900 text-slate-100 rounded-lg p-4 my-3 overflow-x-auto text-sm;
-}
-.tiptap-content code {
-  @apply bg-slate-200 rounded px-1 py-0.5 text-sm;
+  @apply overflow-x-auto rounded-xl bg-rail px-4 py-3.5 font-mono text-[13.5px] leading-relaxed text-[#e6e6ea];
 }
 .tiptap-content pre code {
-  @apply bg-transparent p-0;
+  @apply bg-transparent p-0 text-inherit;
 }
+.tiptap-content code {
+  @apply rounded bg-canvas px-1.5 py-0.5 font-mono text-[0.88em] text-ink;
+}
+
+/* Jadval */
 .tiptap-content table {
-  @apply border-collapse w-full my-3;
+  @apply my-4 w-full table-fixed border-collapse overflow-hidden;
 }
 .tiptap-content th,
 .tiptap-content td {
-  @apply border border-slate-300 px-3 py-2 text-left;
+  @apply relative border border-line px-3 py-2 text-left align-top;
 }
 .tiptap-content th {
-  @apply bg-slate-100 font-semibold;
+  @apply bg-canvas font-semibold;
 }
-/* Placeholder (bo'sh editor) */
+.tiptap-content .selectedCell:after {
+  @apply pointer-events-none absolute inset-0 bg-brand/10 content-[''];
+}
+.tiptap-content .column-resize-handle {
+  @apply absolute bottom-0 right-[-2px] top-0 w-1 bg-brand;
+}
+
+/* Bo'sh muharrir uchun ko'rsatma matni */
 .tiptap-content p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
-  @apply text-slate-400 float-left h-0 pointer-events-none;
+  @apply pointer-events-none float-left h-0 text-ink-faint;
+}
+
+/* --- kod bo'yash (lowlight / highlight.js sinflari) --- */
+.tiptap-content pre .hljs-comment,
+.tiptap-content pre .hljs-quote {
+  color: #8b8b96;
+  font-style: italic;
+}
+.tiptap-content pre .hljs-keyword,
+.tiptap-content pre .hljs-selector-tag,
+.tiptap-content pre .hljs-literal {
+  color: #c792ea;
+}
+.tiptap-content pre .hljs-string,
+.tiptap-content pre .hljs-title,
+.tiptap-content pre .hljs-name,
+.tiptap-content pre .hljs-attr {
+  color: #9ae6a0;
+}
+.tiptap-content pre .hljs-number,
+.tiptap-content pre .hljs-built_in,
+.tiptap-content pre .hljs-symbol {
+  color: #f0b27a;
+}
+.tiptap-content pre .hljs-variable,
+.tiptap-content pre .hljs-template-variable,
+.tiptap-content pre .hljs-type {
+  color: #7fd3f7;
+}
+.tiptap-content pre .hljs-function .hljs-title {
+  color: #b9a6ff;
 }
