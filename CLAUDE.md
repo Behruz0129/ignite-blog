@@ -239,3 +239,24 @@ Diqqat: prodda Google va Discord **sozlanmagan** (`/api/auth/google` → 400),
 shuning uchun hozircha Telegram — yagona kirish yo'li. BotFather'da
 `/setdomain` qilinmasa saytdan hech kim kira olmaydi (adminlar bundan
 mustasno). Ikkinchi yo'l kerak bo'lsa — Google OAuth qo'shish eng oson.
+
+**2026-08-26 — AI uchun JSON import va YouTube tuzatishi.**
+Adminkada "JSON" tugmasi: AI yozgan maqolani bir bosishda formaga o'tkazadi
+(`admin/src/components/JsonImport.tsx`). Kategoriya va teglar **nom** bo'yicha
+topiladi, topilmagani ogohlantirish sifatida ko'rsatiladi va qolgan maydonlar
+baribir to'ldiriladi. `imagePrompt` alohida blokda chiqadi.
+
+Kutilayotgan JSON maydonlari: `title`, `excerpt`, `content` (HTML),
+`metaTitle` (≤60), `metaDescription` (≤160), `category`, `tags[]`,
+`imagePrompt`. `slug` kerak emas — sarlavhadan yasaladi.
+
+Shu bilan birga bitta bug tuzatildi: muharrirdagi **YouTube bloki serverda
+o'chib ketardi** — `sanitizeContent` `iframe` ni `nonTextTags` da ushlab
+turgan edi. Endi iframe faqat YouTube hostlariga ruxsat etilgan
+(`allowedIframeHostnames`), boshqasi src'siz qolib `exclusiveFilter` bilan
+tashlanadi.
+
+**Kontent HTML qoidasi:** matn serverda sanitizatsiya qilinadi, ruxsat
+etilmagan teg jimgina yo'qoladi. Ruxsat: h2–h6, p, ul/ol/li, blockquote,
+pre/code, strong/em/u/mark, a, img, table, hr va YouTube iframe. `h1`
+ishlatilmaydi (sahifada sarlavha allaqachon h1).
