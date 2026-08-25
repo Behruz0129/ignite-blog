@@ -11,7 +11,12 @@ import {
   hashToken,
   refreshTokenExpiry,
 } from "../utils/token";
-import { generateSecureToken, tokenExpiryHours } from "../utils/secureToken";
+import {
+  generateSecureToken,
+  // Diqqat: token.ts dagi hashToken bilan nomi bir xil, shuning uchun taxallus.
+  hashToken as hashSecureToken,
+  tokenExpiryHours,
+} from "../utils/secureToken";
 import { LoginInput, RegisterInput } from "../validators/auth.validator";
 import { emailService } from "./email.service";
 import {
@@ -62,6 +67,9 @@ export const authService = {
       throw AppError.badRequest("Bu email allaqachon ro'yxatdan o'tgan");
     }
 
+    // Token foydalanuvchiga OCHIQ ko'rinishda ketadi (emaildagi havola),
+    // bazaga esa faqat uning sha256 hash'i yoziladi. Baza sizib chiqsa ham
+    // undan havolani tiklab bo'lmaydi — refresh token'da ham shu yondashuv.
     const verificationToken = generateSecureToken();
     const hashed = await bcrypt.hash(input.password, 10);
 
@@ -73,7 +81,7 @@ export const authService = {
         role: "USER",
         provider: "LOCAL",
         emailVerified: false,
-        emailVerificationToken: verificationToken,
+        emailVerificationToken: hashSecureToken(verificationToken),
         emailVerificationExpires: tokenExpiryHours(24),
       },
     });
@@ -127,7 +135,8 @@ export const authService = {
 
     const user = await prisma.user.findFirst({
       where: {
-        emailVerificationToken: token,
+        // Bazada hash turadi, shuning uchun kelgan tokenni hash qilib qidiramiz
+        emailVerificationToken: hashSecureToken(token),
         emailVerificationExpires: { gt: new Date() },
       },
     });
@@ -164,7 +173,7 @@ export const authService = {
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        emailVerificationToken: verificationToken,
+        emailVerificationToken: hashSecureToken(verificationToken),
         emailVerificationExpires: tokenExpiryHours(24),
       },
     });
@@ -186,7 +195,7 @@ export const authService = {
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        passwordResetToken: resetToken,
+        passwordResetToken: hashSecureToken(resetToken),
         passwordResetExpires: tokenExpiryHours(1),
       },
     });
@@ -208,7 +217,7 @@ export const authService = {
   async resetPassword(token: string, password: string) {
     const user = await prisma.user.findFirst({
       where: {
-        passwordResetToken: token,
+        passwordResetToken: hashSecureToken(token),
         passwordResetExpires: { gt: new Date() },
       },
     });

@@ -44,9 +44,54 @@ export function clearAuth() {
   localStorage.removeItem(USER_KEY);
 }
 
+/**
+ * TOKENNI YANGILASH
+ * -----------------
+ * Access token qisqa muddatli. Muddati tugaganda backend 401 qaytaradi —
+ * shunda saqlangan refresh token bilan yangi juftlik olamiz va so'rovni
+ * bir marta qayta yuboramiz. Foydalanuvchi buni sezmaydi.
+ *
+ * Nega bitta umumiy promise? Backend refresh tokenni ROTATSIYA qiladi:
+ * ishlatilgan token darhol bekor bo'ladi. Agar bir vaqtda ikki so'rov 401
+ * olsa va ikkalasi ham refresh qilsa, ikkinchisi allaqachon bekor qilingan
+ * token bilan boradi va foydalanuvchi bejiz tizimdan chiqib ketadi.
+ * Shuning uchun bir paytda faqat bitta refresh ishlaydi, qolganlari uni
+ * kutadi.
+ */
+let refreshInFlight: Promise<boolean> | null = null;
+
+async function doRefresh(): Promise<boolean> {
+  const refreshToken = getStoredRefreshToken();
+  if (!refreshToken) return false;
+  try {
+    const res = await fetch(`${PUBLIC_API_URL}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    });
+    if (!res.ok) return false;
+    const json = await res.json();
+    if (!json?.data?.token) return false;
+    saveAuth(json.data.token, json.data.user, json.data.refreshToken);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function refreshOnce(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = doRefresh().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
 async function authFetch<T>(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  allowRetry = true
 ): Promise<{ ok: boolean; data?: T; message?: string }> {
   const headers: Record<string, string> = {
     Accept: "application/json",
@@ -56,6 +101,17 @@ async function authFetch<T>(
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   const res = await fetch(`${PUBLIC_API_URL}${path}`, { ...options, headers });
+
+  // Token eskirgan bo'lsa — yangilab, so'rovni BIR marta takrorlaymiz.
+  // /auth/refresh ning o'zi 401 bersa takrorlamaymiz (cheksiz sikl bo'lardi).
+  if (res.status === 401 && allowRetry && path !== "/auth/refresh") {
+    if (await refreshOnce()) {
+      return authFetch<T>(path, options, false);
+    }
+    // Refresh ham ishlamadi — sessiya haqiqatan tugagan
+    clearAuth();
+  }
+
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
     return { ok: false, message: json?.message || "Xatolik" };

@@ -12,7 +12,7 @@ import {
   resetPasswordSchema,
   telegramAuthSchema,
 } from "../validators/auth.validator";
-import { authLimiter } from "../middlewares/rateLimit.middleware";
+import { authLimiter, refreshLimiter } from "../middlewares/rateLimit.middleware";
 
 const router = Router();
 
@@ -41,7 +41,7 @@ router.post(
 );
 router.post("/telegram", authLimiter, validate(telegramAuthSchema), authController.telegramLogin);
 
-router.post("/refresh", authLimiter, validate(refreshSchema), authController.refresh);
+router.post("/refresh", refreshLimiter, validate(refreshSchema), authController.refresh);
 router.post("/logout", authController.logout);
 router.get("/me", authenticate, authController.me);
 

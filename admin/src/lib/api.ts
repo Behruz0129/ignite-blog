@@ -3,7 +3,7 @@
 // fetch ustiga yupqa qatlam. Har bir so'rovga avtomatik JWT token qo'shadi
 // va xatolarni bir xil ko'rinishda qaytaradi.
 
-import { getToken, clearAuth } from "./auth";
+import { getToken, getRefreshToken, saveAuth, clearAuth } from "./auth";
 import type { ApiResponse } from "./types";
 import { API_BASE_URL as BASE_URL } from "./api-url";
 
@@ -14,9 +14,52 @@ interface RequestOptions {
   isFormData?: boolean;
 }
 
+/**
+ * TOKENNI YANGILASH
+ * -----------------
+ * Access token muddati tugaganda backend 401 beradi. Avval saqlangan refresh
+ * token bilan yangi juftlik olishga urinamiz — admin maqola yozayotganda
+ * to'satdan login sahifasiga otilmasligi uchun. Faqat u ham ishlamasa
+ * chiqaramiz.
+ *
+ * Backend refresh tokenni rotatsiya qiladi (ishlatilgani bekor bo'ladi),
+ * shuning uchun bir paytda faqat BITTA refresh ketadi — parallel so'rovlar
+ * shu bitta natijani kutadi.
+ */
+let refreshInFlight: Promise<boolean> | null = null;
+
+async function doRefresh(): Promise<boolean> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return false;
+  try {
+    const res = await fetch(`${BASE_URL}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    });
+    if (!res.ok) return false;
+    const json = await res.json();
+    if (!json?.data?.token) return false;
+    saveAuth(json.data.token, json.data.user, json.data.refreshToken);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function refreshOnce(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = doRefresh().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
 async function request<T>(
   path: string,
-  options: RequestOptions = {}
+  options: RequestOptions = {},
+  allowRetry = true
 ): Promise<ApiResponse<T>> {
   const { method = "GET", body, isFormData = false } = options;
 
@@ -40,11 +83,18 @@ async function request<T>(
     body: payload,
   });
 
-  // 401 bo'lsa - token eskirgan, login sahifasiga qaytaramiz
-  if (res.status === 401 && typeof window !== "undefined") {
-    clearAuth();
-    if (!window.location.pathname.startsWith("/login")) {
-      window.location.href = "/login";
+  // 401 bo'lsa - avval tokenni yangilab, so'rovni bir marta takrorlaymiz.
+  // /auth/refresh ning o'zi 401 bersa takrorlamaymiz (cheksiz sikl bo'lardi).
+  if (res.status === 401 && allowRetry && path !== "/auth/refresh") {
+    if (await refreshOnce()) {
+      return request<T>(path, options, false);
+    }
+    // Refresh ham ishlamadi — sessiya haqiqatan tugagan
+    if (typeof window !== "undefined") {
+      clearAuth();
+      if (!window.location.pathname.startsWith("/login")) {
+        window.location.href = "/login";
+      }
     }
   }
 

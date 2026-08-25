@@ -22,14 +22,45 @@ export const apiLimiter = rateLimit({
   },
 });
 
+/**
+ * Parol tanlash (brute-force) mumkin bo'lgan endpointlar uchun: login,
+ * register, forgot/reset password, email tasdiqlash.
+ *
+ * `skipSuccessfulRequests` MUHIM: limit faqat MUVAFFAQIYATSIZ urinishlarni
+ * sanaydi. Aks holda oddiy foydalanuvchi kun davomida bir necha marta kirsa
+ * yoki bir nechta qurilmadan foydalansa, hech qanday hujum qilmasa ham
+ * o'zini bloklab qo'yardi.
+ */
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 daqiqa
-  max: 10, // har 15 daqiqada 10 ta urinish
+  max: 10, // har 15 daqiqada 10 ta MUVAFFAQIYATSIZ urinish
+  skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
     success: false,
     message:
       "Juda ko'p kirish urinishi. 15 daqiqadan keyin qayta urinib ko'ring.",
+  },
+});
+
+/**
+ * Token yangilash uchun alohida, yumshoqroq limit.
+ *
+ * Nega alohida? /auth/refresh — foydalanuvchi bosadigan tugma emas, balki
+ * access token muddati tugaganda mijoz AVTOMATIK chaqiradigan endpoint.
+ * Uni login bilan bir xil qattiq limitga qo'yish faol foydalanuvchini
+ * (ayniqsa bir nechta ochiq varaq bilan) sababsiz tizimdan chiqarib
+ * yuborardi. Ayni paytda bu ham cheksiz emas — o'g'irlangan token bilan
+ * cheksiz urinishning oldini oladi.
+ */
+export const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Juda ko'p token yangilash so'rovi. Birozdan keyin urinib ko'ring.",
   },
 });
